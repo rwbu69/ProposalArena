@@ -1,0 +1,16 @@
+{
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "language": "UI Language",
+    "provider": "AI Provider",
+    "model": "Model",
+    "apiKey": "API Key",
+    "save": "Save Changes"
+  },
+  "interview": {
+    "start": "Start Defense",
+    "next": "Next Question",
+    "finish": "Finish Defense"
+  }
+}

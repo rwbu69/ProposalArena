@@ -1,0 +1,16 @@
+{
+  "settings": {
+    "title": "Pengaturan",
+    "theme": "Tema",
+    "language": "Bahasa UI",
+    "provider": "Penyedia AI",
+    "model": "Model",
+    "apiKey": "Kunci API",
+    "save": "Simpan Perubahan"
+  },
+  "interview": {
+    "start": "Mulai Ujian",
+    "next": "Pertanyaan Berikutnya",
+    "finish": "Selesai Ujian"
+  }
+}
