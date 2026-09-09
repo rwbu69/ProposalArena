@@ -1,9 +1,23 @@
 <script lang="ts">
   import ChatWindow from '../interview/ChatWindow.svelte';
   import Controls from '../interview/Controls.svelte';
-  import ReportViewer from '../interview/ReportViewer.svelte';
+  import IntegrityMonitor from '../interview/IntegrityMonitor.svelte';
   import { currentProposal, currentSession } from '../../lib/interview/controller';
+  import { onDestroy } from 'svelte';
+  
+  let pdfUrl = '';
+  $: if ($currentProposal?.fileData) {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    const blob = new Blob([$currentProposal.fileData], { type: 'application/pdf' });
+    pdfUrl = URL.createObjectURL(blob);
+  }
+  
+  onDestroy(() => {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+  });
 </script>
+
+<IntegrityMonitor />
 
 <div class="flex h-screen w-full bg-slate-100 overflow-hidden">
   <!-- Left Panel: Proposal Viewer -->
@@ -14,10 +28,16 @@
         {$currentProposal?.title || 'Unknown Title'}
       </p>
     </div>
-    <div class="flex-1 overflow-y-auto p-6">
-      <div class="prose max-w-none text-slate-700 whitespace-pre-wrap font-serif">
-        {$currentProposal?.text || 'No text available.'}
-      </div>
+    <div class="flex-1 overflow-hidden bg-slate-200">
+      {#if pdfUrl}
+        <embed src={pdfUrl} type="application/pdf" class="w-full h-full" />
+      {:else}
+        <div class="overflow-y-auto p-6 h-full bg-white">
+          <div class="prose max-w-none text-slate-700 whitespace-pre-wrap font-serif">
+            {$currentProposal?.text || 'No text available.'}
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -32,11 +52,7 @@
       </div>
     </div>
     
-    {#if $currentSession?.state === 'REPORT_GENERATION' || $currentSession?.state === 'REPORT_READY'}
-      <ReportViewer />
-    {:else}
-      <ChatWindow />
-      <Controls />
-    {/if}
+    <ChatWindow />
+    <Controls />
   </div>
 </div>

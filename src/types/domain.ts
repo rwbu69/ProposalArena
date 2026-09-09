@@ -4,6 +4,7 @@ export interface Proposal {
   id: string;
   title: string;
   text: string;
+  fileData?: ArrayBuffer; // For PDF rendering
   language: 'en' | 'id';
   uploadedAt: number;
 }
@@ -11,6 +12,7 @@ export interface Proposal {
 export interface ProposalAnalysis {
   id: string;
   title?: string;
+  field?: string;
   researchProblem?: string;
   researchQuestions?: string[];
   objectives?: string[];
@@ -27,6 +29,7 @@ export interface InterviewSession {
   state: InterviewState;
   questionIndex: number;
   difficulty: number;
+  interruptions: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -57,6 +60,17 @@ export interface DefenseReport {
   weaknesses: string[];
   recommendations: string[];
   practiceQuestions: string[];
+  notes?: string[];
   summary: string;
   generatedAt: number;
+}
+
+export interface HumanJudgment {
+  id: string; // e.g. "judgment_sessionId_messageId"
+  sessionId: string;
+  messageId: string; // The ID of the assistant's question message
+  relevanceScore: number; // 1-5
+  difficultyScore: number; // 1-5
+  notes?: string;
+  evaluatedAt: number;
 }

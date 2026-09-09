@@ -9,16 +9,18 @@ import type {
   InterviewSession,
   InterviewMessage,
   AnswerEvaluation,
-  DefenseReport
+  DefenseReport,
+  HumanJudgment
 } from '../../types/domain';
 
 export interface ThesisDefenseDBSchema extends DBSchema {
   proposals: { key: string; value: Proposal };
   proposalAnalyses: { key: string; value: ProposalAnalysis };
   interviewSessions: { key: string; value: InterviewSession };
-  interviewMessages: { key: string; value: InterviewMessage };
+  interviewMessages: { key: string; value: InterviewMessage; indexes: { 'sessionId': string } };
   answerEvaluations: { key: string; value: AnswerEvaluation };
   reports: { key: string; value: DefenseReport };
+  judgments: { key: string; value: HumanJudgment; indexes: { 'sessionId': string } };
 }
 
 export async function openDatabase(): Promise<IDBPDatabase<ThesisDefenseDBSchema>> {
@@ -28,19 +30,28 @@ export async function openDatabase(): Promise<IDBPDatabase<ThesisDefenseDBSchema
 
   return openDB<ThesisDefenseDBSchema>(DB_NAME, DB_VERSION, {
     upgrade(db) {
-      const stores = [
-        'proposals',
-        'proposalAnalyses',
-        'interviewSessions',
-        'interviewMessages',
-        'answerEvaluations',
-        'reports'
-      ] as const;
-
-      for (const store of stores) {
-        if (!db.objectStoreNames.contains(store)) {
-          db.createObjectStore(store, { keyPath: 'id' });
-        }
+      if (!db.objectStoreNames.contains('proposals')) {
+        db.createObjectStore('proposals', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('proposalAnalyses')) {
+        db.createObjectStore('proposalAnalyses', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('interviewSessions')) {
+        db.createObjectStore('interviewSessions', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('interviewMessages')) {
+        const store = db.createObjectStore('interviewMessages', { keyPath: 'id' });
+        store.createIndex('sessionId', 'sessionId');
+      }
+      if (!db.objectStoreNames.contains('answerEvaluations')) {
+        db.createObjectStore('answerEvaluations', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('reports')) {
+        db.createObjectStore('reports', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('judgments')) {
+        const store = db.createObjectStore('judgments', { keyPath: 'id' });
+        store.createIndex('sessionId', 'sessionId');
       }
     }
   });
@@ -83,5 +94,18 @@ export const dbStore = {
   async getReport(sessionId: string) {
     const db = await openDatabase();
     return db.get('reports', sessionId);
+  },
+  async saveJudgment(judgment: HumanJudgment) {
+    const db = await openDatabase();
+    await db.put('judgments', judgment);
+  },
+  async getJudgments(sessionId: string) {
+    const db = await openDatabase();
+    const all = await db.getAll('judgments');
+    return all.filter(j => j.sessionId === sessionId).sort((a, b) => a.evaluatedAt - b.evaluatedAt);
+  },
+  async getAllSessions() {
+    const db = await openDatabase();
+    return db.getAll('interviewSessions');
   }
 };

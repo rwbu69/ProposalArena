@@ -5,6 +5,8 @@ import { dbStore } from '../db/database';
 import { generateQuestion, evaluateAnswer, generateReport } from '../ai/pipeline';
 import { createAIProvider } from '../ai/provider';
 import { loadSettings } from '../storage/settings';
+import { voiceEnabled } from '../state/stores';
+import { speak } from '../voice/speech';
 
 export const currentSession = atom<InterviewSession | null>(null);
 export const currentMessages = atom<InterviewMessage[]>([]);
@@ -15,7 +17,11 @@ export const isProcessing = atom<boolean>(false);
 
 export async function loadProposal(proposalId: string) {
   const proposal = await dbStore.getProposal(proposalId);
-  if (proposal) currentProposal.set(proposal);
+  if (proposal) {
+    currentProposal.set(proposal);
+    const { globalIndexer } = await import('../search/indexer');
+    globalIndexer.indexProposal(proposal.id, proposal.text);
+  }
 }
 
 export async function initSession(proposalId: string) {
@@ -30,6 +36,7 @@ export async function initSession(proposalId: string) {
     state: 'READY',
     questionIndex: 0,
     difficulty: 3,
+    interruptions: 0,
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -62,6 +69,10 @@ export async function askNextQuestion() {
     const question = await generateQuestion(provider, analysis, messages, proposal.language, session.difficulty);
     
     await addMessage('assistant', question);
+    
+    if (voiceEnabled.get()) {
+      speak(question, proposal.language);
+    }
     
     session.state = 'WAITING_FOR_ANSWER';
     session.questionIndex++;
@@ -140,6 +151,9 @@ export async function endInterview() {
     await dbStore.saveSession(session);
     currentSession.set(session);
     currentReport.set(report);
+    
+    // Redirect to standalone report page
+    window.location.href = `/report?id=${session.id}`;
   } catch (e) {
     console.error("Failed to generate report", e);
   } finally {

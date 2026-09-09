@@ -34,10 +34,16 @@
       const text = await extractTextFromFile(file);
       const language = detectLanguage(text);
       
+      let fileData: ArrayBuffer | undefined = undefined;
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        fileData = await file.arrayBuffer();
+      }
+      
       const proposal = {
         id: uuidv4(),
         title: file.name,
         text,
+        fileData,
         language,
         uploadedAt: Date.now()
       };
@@ -63,6 +69,9 @@
       
       $currentAnalysis = analysis;
       await initSession(proposal.id);
+      
+      const { globalIndexer } = await import('../../lib/search/indexer');
+      globalIndexer.indexProposal(proposal.id, text);
     } catch (e: any) {
       errorStr = e.message;
     } finally {

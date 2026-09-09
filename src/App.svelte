@@ -5,22 +5,28 @@
   import SettingsModal from './components/layout/SettingsModal.svelte';
 </script>
 
-<SettingsModal />
-
 <main class="min-h-screen bg-slate-50 text-slate-900 font-sans">
   {#if $currentSession}
     <SplitLayout />
   {:else}
-    <div class="py-12 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-3xl mx-auto text-center mb-12">
+    <div class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div class="text-center mb-12">
         <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight sm:text-5xl">
-          AI Thesis Defense Simulator
+          Proposal Arena
         </h1>
         <p class="mt-4 text-xl text-slate-500">
-          Upload your proposal, and face an AI examiner to prepare for your defense.
+          Upload your proposal, configure your AI examiner, and start your defense.
         </p>
       </div>
-      <FileUploader />
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <SettingsModal />
+        </div>
+        <div>
+          <FileUploader />
+        </div>
+      </div>
     </div>
   {/if}
 </main>

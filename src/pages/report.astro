@@ -1,0 +1,14 @@
+---
+import ReportViewer from '../components/interview/ReportViewer.svelte';
+const title = 'Defense Report | Proposal Arena';
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title}</title>
+  </head>
+  <body class="bg-slate-50 min-h-screen">
+    <ReportViewer client:only="svelte" />
+  </body>
+</html>

@@ -1,5 +1,6 @@
 import type { AIProvider } from '../../types/ai';
 import type { ProposalAnalysis, InterviewMessage, AnswerEvaluation, DefenseReport } from '../../types/domain';
+import examinerPromptTemplate from '../../prompts/examiner.md?raw';
 
 export async function analyzeProposal(provider: AIProvider, text: string, language: 'en' | 'id'): Promise<ProposalAnalysis> {
   const sysLang = language === 'en' ? 'English' : 'Bahasa Indonesia';
@@ -8,6 +9,7 @@ Respond in ${sysLang}.
 Return ONLY a valid JSON object with the following schema:
 {
   "title": "String",
+  "field": "String (Computer Science sub-field, e.g., Machine Learning, HCI, Systems)",
   "researchProblem": "String",
   "researchQuestions": ["String"],
   "objectives": ["String"],
@@ -34,18 +36,26 @@ ${text.slice(0, 15000)} // Truncating to avoid token limits for now`;
 
 export async function generateQuestion(provider: AIProvider, analysis: ProposalAnalysis, transcript: InterviewMessage[], language: 'en' | 'id', difficulty: number): Promise<string> {
   const sysLang = language === 'en' ? 'English' : 'Bahasa Indonesia';
-  const transcriptText = transcript.map(m => `${m.role}: ${m.content}`).join('\n');
+  const recentTranscript = transcript.slice(-6);
+  const transcriptText = recentTranscript.map(m => `${m.role}: ${m.content}`).join('\n');
   
-  const prompt = `You are an examiner in a thesis proposal defense. The defense is conducted in ${sysLang}.
-Based on the proposal analysis and the transcript so far, generate the NEXT question for the student.
-Difficulty level (1-5): ${difficulty}
-Ask only ONE question. Do not provide greetings or explanations.
+  // Advanced Grounding: search for relevant chunks
+  let relevantContext = 'No specific excerpts retrieved.';
+  if (analysis.id) {
+    const { globalIndexer } = await import('../search/indexer');
+    const chunks = globalIndexer.searchContext(analysis.id, transcriptText);
+    if (chunks.length > 0) {
+      relevantContext = chunks.join('\n\n---\n\n');
+    }
+  }
 
-Analysis:
-${JSON.stringify(analysis, null, 2)}
-
-Transcript:
-${transcriptText}`;
+  const prompt = examinerPromptTemplate
+    .replace(/{{LANGUAGE}}/g, sysLang)
+    .replace(/{{DIFFICULTY}}/g, difficulty.toString())
+    .replace(/{{FIELD}}/g, analysis.field || 'Computer Science')
+    .replace(/{{ANALYSIS}}/g, JSON.stringify(analysis, null, 2))
+    .replace(/{{RELEVANT_CONTEXT}}/g, relevantContext)
+    .replace(/{{TRANSCRIPT}}/g, transcriptText);
 
   const response = await provider.generate({
     model: provider.defaultModel,
@@ -100,6 +110,7 @@ Return ONLY a valid JSON object with the following schema:
   "weaknesses": ["String"],
   "recommendations": ["String"],
   "practiceQuestions": ["String"],
+  "notes": ["String (Feedback on how the user answered their questions and inputs for improving their defense style)"],
   "summary": "String"
 }
 
