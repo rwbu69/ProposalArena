@@ -10,3 +10,4 @@ export const voiceEnabled = persistentAtom<boolean>('thesis-defense-simulator:vo
 
 export const isInterviewActive = atom<boolean>(false);
 export const integrityWarnings = atom<string | null>(null);
+export const showSettings = atom<boolean>(false);

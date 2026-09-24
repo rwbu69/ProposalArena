@@ -1,16 +1,63 @@
 {
+  "app": {
+    "title": "Arena Proposal",
+    "subtitle": "Unggah proposal Anda, konfigurasikan penguji AI, dan mulai sidang Anda.",
+    "document": "Dokumen Proposal",
+    "interview": "Sidang Ujian",
+    "status": "Status",
+    "unknownTitle": "Judul Tidak Diketahui",
+    "noText": "Tidak ada teks tersedia.",
+    "unknown": "Tidak Diketahui"
+  },
+  "upload": {
+    "title": "Unggah Proposal",
+    "description": "Seret dan lepas file PDF atau TXT Anda ke sini, atau klik untuk memilih.",
+    "selected": "Terpilih:",
+    "start": "Mulai Simulasi Sidang",
+    "processing": "Memproses..."
+  },
   "settings": {
     "title": "Pengaturan",
     "theme": "Tema",
     "language": "Bahasa UI",
     "provider": "Penyedia AI",
-    "model": "Model",
+    "model": "Nama Model (pisahkan dengan koma untuk cadangan)",
+    "proxy": "URL Proxy",
+    "proxyHint": "Opsional. Timpa titik akhir API bawaan.",
     "apiKey": "Kunci API",
-    "save": "Simpan Perubahan"
+    "apiHint": "Disimpan secara lokal di browser Anda.",
+    "save": "Simpan Pengaturan"
   },
   "interview": {
     "start": "Mulai Ujian",
-    "next": "Pertanyaan Berikutnya",
-    "finish": "Selesai Ujian"
+    "next": "Pertanyaan Berikut",
+    "finish": "Selesai Ujian",
+    "placeholder": "Ketik jawaban Anda...",
+    "listening": "Mendengarkan...",
+    "waiting": "Menunggu AI...",
+    "stagingTitle": "Persiapan Sidang",
+    "stagingSubtitle": "Apakah Anda siap untuk memulai sidang?",
+    "yes": "Ya",
+    "pleaseStart": "Silakan mulai sidang terlebih dahulu...",
+    "dictationUnsupported": "Pengenalan suara tidak didukung di browser ini. Cobalah menggunakan Chrome.",
+    "mute": "Bisukan Penguji",
+    "listen": "Dengarkan Penguji",
+    "dictate": "Diktekan Jawaban"
+  },
+  "integrity": {
+    "title": "Integritas Sesi",
+    "warning": "Peringatan: Kami mendeteksi Anda berpindah tab atau mengecilkan jendela. Demi integritas ujian, mohon tetap fokus.",
+    "reportWarning": "Integritas Sesi: Anda berpindah tab atau kehilangan fokus layar sebanyak {count} kali selama sidang."
+  },
+  "report": {
+    "title": "Laporan Sidang",
+    "return": "Kembali ke Arena",
+    "loading": "Memuat laporan...",
+    "summary": "Ringkasan",
+    "notes": "Catatan & Umpan Balik Penguji",
+    "strengths": "Kelebihan",
+    "weaknesses": "Kelemahan",
+    "recommendations": "Rekomendasi",
+    "practice": "Latihan Pertanyaan"
   }
 }

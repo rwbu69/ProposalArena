@@ -6,23 +6,35 @@
   import { createAIProvider } from '../../lib/ai/provider';
   import { loadSettings } from '../../lib/storage/settings';
   import { v4 as uuidv4 } from 'uuid';
-
+  import { t } from 'svelte-i18n';
+  
   let dragOver = false;
   let file: File | null = null;
   let errorStr = '';
+  let fileInput: HTMLInputElement;
 
   function handleDrop(e: DragEvent) {
     e.preventDefault();
     dragOver = false;
     if (e.dataTransfer?.files.length) {
-      file = e.dataTransfer.files[0] || null;
+      handleFiles(e.dataTransfer.files[0]);
     }
   }
 
   function handleFileChange(e: Event) {
     const target = e.target as HTMLInputElement;
     if (target.files?.length) {
-      file = target.files[0] || null;
+      handleFiles(target.files[0]);
+    }
+  }
+
+  function handleFiles(selectedFile: File) {
+    const validTypes = ["application/pdf", "text/plain"];
+    if (validTypes.includes(selectedFile.type)) {
+      file = selectedFile;
+      processFile();
+    } else {
+      errorStr = "Format file tidak didukung. Harap unggah PDF atau TXT.";
     }
   }
 
@@ -50,16 +62,15 @@
       
       await dbStore.saveProposal(proposal);
       
-      // Attempt analysis
       const settings = loadSettings();
       if (!settings?.apiKey) {
-        throw new Error("Please configure your API key in Settings first. You can add it later.");
+        throw new Error("API Key belum dikonfigurasi. Harap isi di Pengaturan (ikon gerigi).");
       }
       
       const provider = createAIProvider({
         providerId: settings.providerId || 'openrouter',
         apiKey: settings.apiKey,
-        model: settings.model || 'nvidia/nemotron-3-ultra-550b-a55b:free, nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free, nvidia/nemotron-3.5-lightning:free, nvidia/nemotron-3-super-120b-a12b:free, thinkingmachines/inkling:free, poolside/laguna-s-2.1:free'
+        model: settings.model || 'meta-llama/llama-3.1-8b-instruct:free'
       });
       
       const analysis = await analyzeProposal(provider, text, language);
@@ -80,29 +91,61 @@
   }
 </script>
 
-<div class="max-w-xl mx-auto p-8 border-2 border-dashed rounded-xl mt-12 bg-white" 
-     role="presentation"
-     class:border-blue-500={dragOver}
+<style>
+  .canvas-dropzone {
+    transition: background-color 0.4s ease, border-color 0.4s ease;
+  }
+  .canvas-dropzone.dragover {
+    background-color: #242424;
+  }
+  /* In light mode dragover, use a different color but tailwind takes care of bg via utilities mostly. We'll use classes instead. */
+  .crosshair {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .canvas-dropzone:hover .crosshair {
+    transform: scale(1.5) rotate(90deg);
+  }
+</style>
+
+<div class="canvas-dropzone w-full h-full bg-zinc-50 dark:bg-space-right cursor-pointer flex flex-col items-center justify-center relative group {dragOver ? 'bg-zinc-200 dark:!bg-space-active' : ''}"
+     role="button"
+     tabindex="0"
      on:dragover|preventDefault={() => dragOver = true}
      on:dragleave={() => dragOver = false}
-     on:drop={handleDrop}>
+     on:drop={handleDrop}
+     on:click={() => fileInput.click()}
+     on:keydown={(e) => e.key === 'Enter' && fileInput.click()}>
   
-  <h2 class="text-2xl font-bold mb-4 text-slate-800">Upload Proposal</h2>
-  <p class="text-slate-600 mb-6">Drag and drop your PDF or TXT file here, or click to select.</p>
-  
-  <input type="file" accept=".pdf,.txt" class="block w-full mb-4 text-slate-700" on:change={handleFileChange} />
-  
-  {#if file}
-    <p class="mb-4 font-medium text-slate-700">Selected: {file.name}</p>
-    <button 
-      on:click={processFile}
-      disabled={$isProcessing}
-      class="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 disabled:opacity-50">
-      {$isProcessing ? 'Processing...' : 'Start Defense Simulator'}
-    </button>
+  <div class="noise-bg"></div>
+
+  {#if $isProcessing}
+    <div class="crosshair text-black dark:text-space-textHighlight flex items-center justify-center w-16 h-16 rounded-full border border-black dark:border-space-textSoft opacity-100 scale-125">
+      <svg class="animate-spin" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+    </div>
+  {:else}
+    <div class="crosshair text-zinc-400 dark:text-space-textMuted flex items-center justify-center w-16 h-16 rounded-full border border-zinc-200 dark:border-[#333] group-hover:border-black dark:group-hover:border-space-textSoft group-hover:text-black dark:group-hover:text-space-textHighlight">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </div>
   {/if}
 
-  {#if errorStr}
-    <p class="mt-4 text-red-500">{errorStr}</p>
-  {/if}
+  <div class="absolute bottom-8 lg:bottom-12 left-0 w-full text-center px-6 pointer-events-none">
+    {#if errorStr}
+      <p class="text-red-500 dark:text-red-400 text-sm tracking-wide mb-2 max-w-lg mx-auto">{errorStr}</p>
+    {/if}
+    <p class="text-zinc-500 dark:text-space-textMuted text-sm tracking-wide group-hover:text-black dark:group-hover:text-space-textHighlight transition-colors duration-300">
+      {#if $isProcessing}
+        Membaca {file?.name || 'dokumen'}...
+      {:else if dragOver}
+        Lepaskan file sekarang...
+      {:else}
+        {$t('upload.title')}
+      {/if}
+    </p>
+    <p class="text-zinc-400 dark:text-[#555] text-xs mt-2 font-medium">PDF & TXT (Maks 10MB)</p>
+  </div>
+
+  <input type="file" bind:this={fileInput} class="hidden" accept=".pdf,.txt" on:change={handleFileChange} />
 </div>

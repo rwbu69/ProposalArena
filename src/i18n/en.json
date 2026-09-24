@@ -1,16 +1,63 @@
 {
+  "app": {
+    "title": "Proposal Arena",
+    "subtitle": "Upload your proposal, configure your AI examiner, and start your defense.",
+    "document": "Proposal Document",
+    "interview": "Defense Interview",
+    "status": "Status",
+    "unknownTitle": "Unknown Title",
+    "noText": "No text available.",
+    "unknown": "Unknown"
+  },
+  "upload": {
+    "title": "Upload Proposal",
+    "description": "Drag and drop your PDF or TXT file here, or click to select.",
+    "selected": "Selected:",
+    "start": "Start Defense Simulator",
+    "processing": "Processing..."
+  },
   "settings": {
     "title": "Settings",
     "theme": "Theme",
     "language": "UI Language",
     "provider": "AI Provider",
-    "model": "Model",
+    "model": "Model Name (comma-separated for fallback)",
+    "proxy": "Proxy URL",
+    "proxyHint": "Optional. Override the default API endpoint.",
     "apiKey": "API Key",
-    "save": "Save Changes"
+    "apiHint": "Stored locally in your browser.",
+    "save": "Save Settings"
   },
   "interview": {
     "start": "Start Defense",
     "next": "Next Question",
-    "finish": "Finish Defense"
+    "finish": "Finish Defense",
+    "placeholder": "Type your answer...",
+    "listening": "Listening...",
+    "waiting": "Waiting for AI...",
+    "stagingTitle": "Defense Staging",
+    "stagingSubtitle": "Are you ready to start your defense?",
+    "yes": "Yes",
+    "pleaseStart": "Please start the defense first...",
+    "dictationUnsupported": "Speech recognition is not supported in this browser. Try Chrome.",
+    "mute": "Mute Examiner",
+    "listen": "Listen to Examiner",
+    "dictate": "Dictate Answer"
+  },
+  "integrity": {
+    "title": "Session Integrity",
+    "warning": "Warning: We noticed you switched tabs or minimized the window. For the integrity of the examination, please remain focused.",
+    "reportWarning": "Session Integrity: You switched tabs or lost window focus {count} times during the defense."
+  },
+  "report": {
+    "title": "Defense Report",
+    "return": "Return to Arena",
+    "loading": "Loading report...",
+    "summary": "Summary",
+    "notes": "Examiner's Notes & Feedback",
+    "strengths": "Strengths",
+    "weaknesses": "Weaknesses",
+    "recommendations": "Recommendations",
+    "practice": "Practice Questions"
   }
 }

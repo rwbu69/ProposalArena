@@ -4,6 +4,8 @@
   import { integrityWarnings } from '../../lib/state/stores';
   import { dbStore } from '../../lib/db/database';
   import { AlertTriangle } from 'lucide-svelte';
+  import { get } from 'svelte/store';
+  import { t } from 'svelte-i18n';
 
   let hideTimeout: any;
 
@@ -16,7 +18,7 @@
     dbStore.saveSession(updatedSession); // Background save
     
     // Show warning toast
-    $integrityWarnings = "Warning: We noticed you switched tabs or minimized the window. For the integrity of the examination, please remain focused.";
+    $integrityWarnings = get(t)('integrity.warning');
     
     if (hideTimeout) clearTimeout(hideTimeout);
     hideTimeout = setTimeout(() => {
@@ -47,12 +49,12 @@
 </script>
 
 {#if $integrityWarnings}
-  <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-    <div class="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 rounded shadow-lg flex items-start gap-3 max-w-md">
+  <div class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-8 duration-300">
+    <div class="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 border-l-4 border-l-black dark:border-l-white text-black dark:text-white p-4 shadow-xl flex items-start gap-3 max-w-md">
       <AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5" />
       <div>
-        <h3 class="font-bold text-sm">Session Integrity</h3>
-        <p class="text-sm mt-1">{$integrityWarnings}</p>
+        <h3 class="font-bold text-sm">{$t('integrity.title')}</h3>
+        <p class="text-sm mt-1 text-zinc-600 dark:text-zinc-400">{$integrityWarnings}</p>
       </div>
     </div>
   </div>

@@ -33,4 +33,5 @@ export interface AIProviderConfig {
   providerId: string;
   apiKey: string;
   model: string;
+  proxyUrl?: string;
 }

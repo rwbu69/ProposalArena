@@ -2,6 +2,7 @@ export interface AppSettings {
   providerId: string;
   model: string;
   apiKey?: string;
+  proxyUrl?: string;
   theme?: 'system' | 'light' | 'dark';
   uiLanguage?: 'en' | 'id';
 }

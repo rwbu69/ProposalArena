@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laporan Sidang - Hybrid Editorial</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Font Outfit: Dipertahankan karena bersih, geometris, dan sangat nyaman dibaca -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Outfit"', "sans-serif"],
+            },
+            colors: {
+              paper: {
+                bg: "#121212" /* Sedikit lebih gelap dari sebelumnya agar kontras pas */,
+                textMain:
+                  "#EDEDED" /* Putih terang tapi tidak murni, nyaman di mata */,
+                textDim:
+                  "#737373" /* Abu-abu medium untuk label dan teks sekunder */,
+                accent: "#2A2A2A" /* Aksen garis halus */,
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        background-color: #121212;
+        color: #ededed;
+        margin: 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Membatasi lebar teks agar tidak terlalu panjang saat dibaca (optimal reading length) */
+      .prose-reading {
+        max-width: 65ch;
+      }
+
+      ::selection {
+        background-color: #ededed;
+        color: #121212;
+      }
+    </style>
+  </head>
+
+  <body
+    class="font-sans font-light min-h-screen w-full flex justify-center py-12 md:py-24 px-6 md:px-12"
+  >
+    <!-- Container Lebar untuk Layout Grid, tapi dengan max-width agar tidak melebar tanpa batas -->
+    <div class="w-full max-w-[960px]">
+      <!-- Navigasi -->
+      <nav class="mb-24">
+        <button
+          class="text-paper-textDim hover:text-paper-textMain transition-colors text-sm tracking-wide flex items-center gap-2 font-medium"
+        >
+          <span>&larr;</span> Kembali ke Arena
+        </button>
+      </nav>
+
+      <!-- Header Utama -->
+      <header class="mb-24 border-b border-paper-accent pb-12">
+        <p class="text-paper-textDim text-sm tracking-widest uppercase mb-4">
+          Sesi Evaluasi | S-8820-X
+        </p>
+        <h1
+          class="text-4xl md:text-5xl font-medium tracking-tight text-paper-textMain mb-6"
+        >
+          Laporan Sidang Proposal
+        </h1>
+        <p class="text-paper-textDim text-lg prose-reading">
+          Analisis sentimen ulasan e-commerce menggunakan IndoBERT. Di bawah ini
+          adalah hasil peninjauan dan simulasi ujian dari asisten penguji.
+        </p>
+      </header>
+
+      <!-- Struktur Layout Halaman: Label di kiri (w-1/4), Konten di Kanan (w-3/4) -->
+      <main class="space-y-20 md:space-y-32">
+        <!-- Bagian: Ringkasan Eksekutif -->
+        <section
+          class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 md:gap-12"
+        >
+          <div>
+            <h2
+              class="text-xs font-medium text-paper-textDim uppercase tracking-[0.2em] sticky top-8"
+            >
+              Ringkasan
+            </h2>
+          </div>
+          <div class="prose-reading">
+            <p class="text-xl leading-relaxed text-paper-textMain font-normal">
+              Proposal penelitian mengenai analisis sentimen ulasan e-commerce
+              menggunakan IndoBERT menunjukkan potensi yang kuat. Namun,
+              mahasiswa perlu memperjelas metodologi pra-pemrosesan teks tidak
+              baku serta merumuskan strategi konkrit untuk mengatasi batasan
+              panjang token pada model.
+            </p>
+          </div>
+        </section>
+
+        <!-- Bagian: Catatan Penguji -->
+        <section
+          class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 md:gap-12"
+        >
+          <div>
+            <h2
+              class="text-xs font-medium text-paper-textDim uppercase tracking-[0.2em] sticky top-8"
+            >
+              Catatan Penguji
+            </h2>
+          </div>
+          <div
+            class="prose-reading space-y-6 text-base leading-[1.8] text-paper-textDim"
+          >
+            <p>
+              <strong class="text-paper-textMain font-medium"
+                >Kejelasan Logika:</strong
+              >
+              Secara keseluruhan, presentasi alur logika penelitian sudah cukup
+              runut. Namun, mahasiswa perlu lebih percaya diri dalam menjelaskan
+              aspek teknis pra-pemrosesan NLP, mengingat ini adalah inti dari
+              metode yang diajukan.
+            </p>
+            <p>
+              <strong class="text-paper-textMain font-medium"
+                >Konteks Dataset:</strong
+              >
+              Saat menjawab pertanyaan mengenai batasan model (seperti ukuran
+              input atau *out-of-vocabulary*), pastikan untuk selalu
+              menghubungkannya secara langsung dengan karakteristik unik dari
+              dataset ulasan e-commerce yang digunakan, bukan sekadar teori
+              umum.
+            </p>
+          </div>
+        </section>
+
+        <!-- Bagian: Kelebihan & Kelemahan -->
+        <section
+          class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 md:gap-12"
+        >
+          <div>
+            <h2
+              class="text-xs font-medium text-paper-textDim uppercase tracking-[0.2em] sticky top-8"
+            >
+              Analisis Matriks
+            </h2>
+          </div>
+
+          <!-- Grid dalam grid untuk memecah kelebihan & kelemahan -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-12 prose-reading">
+            <!-- Kelebihan -->
+            <div>
+              <h3
+                class="text-base font-medium text-paper-textMain mb-6 flex items-center gap-2"
+              >
+                <span class="w-1 h-1 bg-paper-textDim rounded-full"></span>
+                Kelebihan
+              </h3>
+              <ul
+                class="space-y-6 text-base leading-relaxed text-paper-textDim"
+              >
+                <li>
+                  <span class="text-paper-textMain block mb-1"
+                    >Relevansi Topik</span
+                  >
+                  Sangat relevan dengan isu terkini, memanfaatkan kapabilitas
+                  IndoBERT untuk konteks bahasa lokal.
+                </li>
+                <li>
+                  <span class="text-paper-textMain block mb-1"
+                    >Identifikasi Masalah</span
+                  >
+                  Mampu membedah kelemahan model konvensional dalam menangani
+                  bahasa gaul (*slang*).
+                </li>
+              </ul>
+            </div>
+
+            <!-- Kelemahan -->
+            <div>
+              <h3
+                class="text-base font-medium text-paper-textMain mb-6 flex items-center gap-2"
+              >
+                <span
+                  class="w-1 h-1 bg-paper-textDim rounded-full opacity-30"
+                ></span>
+                Area Perbaikan
+              </h3>
+              <ul
+                class="space-y-6 text-base leading-relaxed text-paper-textDim"
+              >
+                <li>
+                  <span class="text-paper-textMain block mb-1"
+                    >Strategi Tokenisasi</span
+                  >
+                  Belum ada penjelasan detail menangani teks yang melebihi batas
+                  maksimal 512 token pada arsitektur IndoBERT.
+                </li>
+                <li>
+                  <span class="text-paper-textMain block mb-1"
+                    >Ambiguitas Tahapan</span
+                  >
+                  Kurangnya kejelasan tahapan khusus agar normalisasi teks tidak
+                  merusak representasi semantik awal.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bagian: Rekomendasi -->
+        <section
+          class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 md:gap-12 border-t border-paper-accent pt-12"
+        >
+          <div>
+            <h2
+              class="text-xs font-medium text-paper-textDim uppercase tracking-[0.2em] sticky top-8"
+            >
+              Rekomendasi
+            </h2>
+          </div>
+          <div class="prose-reading space-y-8">
+            <!-- Menggunakan penomoran tipografi minimalis (01, 02) alih-alih list bullet -->
+            <div class="flex gap-6 items-start group">
+              <span class="text-paper-textDim font-medium text-sm mt-1"
+                >01</span
+              >
+              <p
+                class="text-base leading-[1.8] text-paper-textMain group-hover:text-white transition-colors"
+              >
+                Menambahkan tahapan normalisasi teks (<span
+                  class="italic text-paper-textDim"
+                  >slangword dictionary</span
+                >) yang terstruktur di awal, sebelum teks dimasukkan ke tahap
+                tokenisasi bawaan IndoBERT.
+              </p>
+            </div>
+
+            <div class="flex gap-6 items-start group">
+              <span class="text-paper-textDim font-medium text-sm mt-1"
+                >02</span
+              >
+              <p
+                class="text-base leading-[1.8] text-paper-textMain group-hover:text-white transition-colors"
+              >
+                Mengkaji ulang dan mendokumentasikan metode
+                <span class="italic text-paper-textDim">truncation</span>
+                (pemotongan) atau
+                <span class="italic text-paper-textDim">chunking</span> untuk
+                menangani teks ulasan yang panjangnya ekstrem.
+              </p>
+            </div>
+
+            <div class="flex gap-6 items-start group">
+              <span class="text-paper-textDim font-medium text-sm mt-1"
+                >03</span
+              >
+              <p
+                class="text-base leading-[1.8] text-paper-textMain group-hover:text-white transition-colors"
+              >
+                Memperkuat tinjauan pustaka mengenai mekanisme
+                <span class="italic text-paper-textDim"
+                  >WordPiece tokenizer</span
+                >
+                agar dapat menjawab pertanyaan penguji secara lebih meyakinkan.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bagian: Antisipasi Pertanyaan -->
+        <section
+          class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 md:gap-12 pb-24"
+        >
+          <div>
+            <h2
+              class="text-xs font-medium text-paper-textDim uppercase tracking-[0.2em] sticky top-8"
+            >
+              Antisipasi Ujian
+            </h2>
+          </div>
+          <div class="prose-reading space-y-10">
+            <p
+              class="text-xl text-paper-textDim font-light italic leading-relaxed border-l border-paper-accent pl-6"
+            >
+              "Bagaimana kamus normalisasi slang yang Anda gunakan dibuat, dan
+              sejauh mana akurasinya dalam mempertahankan makna asli kalimat?"
+            </p>
+            <p
+              class="text-xl text-paper-textDim font-light italic leading-relaxed border-l border-paper-accent pl-6"
+            >
+              "Jika ulasan dipotong karena melebihi 512 token, bagaimana Anda
+              memastikan bahwa inti sentimen (positif/negatif) tidak ikut
+              terpotong?"
+            </p>
+            <p
+              class="text-xl text-paper-textDim font-light italic leading-relaxed border-l border-paper-accent pl-6"
+            >
+              "Apa alasan logis Anda memilih full fine-tuning dibandingkan
+              sekadar melatih layer classifier-nya saja pada IndoBERT?"
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer
+        class="flex justify-between border-t border-paper-accent pt-8 pb-12 text-xs text-paper-textDim font-medium uppercase tracking-[0.2em]"
+      >
+        <span>S-8820-X</span>
+        <span>Akhir Laporan</span>
+      </footer>
+    </div>
+  </body>
+</html>

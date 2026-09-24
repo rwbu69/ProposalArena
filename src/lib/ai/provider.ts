@@ -7,7 +7,7 @@ export function createAIProvider(config: AIProviderConfig): AIProvider {
       return new OpenAICompatibleProvider({
         id: 'openrouter',
         displayName: 'OpenRouter',
-        baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+        baseUrl: config.proxyUrl || 'https://openrouter.ai/api/v1/chat/completions',
         apiKey: config.apiKey,
         model: config.model
       });
@@ -15,7 +15,7 @@ export function createAIProvider(config: AIProviderConfig): AIProvider {
       return new OpenAICompatibleProvider({
         id: 'openai',
         displayName: 'OpenAI',
-        baseUrl: 'https://api.openai.com/v1/chat/completions',
+        baseUrl: config.proxyUrl || 'https://api.openai.com/v1/chat/completions',
         apiKey: config.apiKey,
         model: config.model
       });
@@ -23,7 +23,7 @@ export function createAIProvider(config: AIProviderConfig): AIProvider {
       return new OpenAICompatibleProvider({
         id: 'gemini',
         displayName: 'Google Gemini',
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+        baseUrl: config.proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
         apiKey: config.apiKey,
         model: config.model
       });
