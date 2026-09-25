@@ -25,7 +25,7 @@ export function createAIProvider(config: AIProviderConfig): AIProvider {
         displayName: 'Google Gemini',
         baseUrl: config.proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
         apiKey: config.apiKey,
-        model: config.model
+        model: config.model || 'gemini-3.5-flash-lite'
       });
     default:
       throw new Error(`Unsupported AI provider: ${config.providerId}`);

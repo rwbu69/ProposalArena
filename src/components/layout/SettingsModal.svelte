@@ -9,16 +9,23 @@
   
   const OPENROUTER_DEFAULT = 'nvidia/nemotron-3-ultra-550b-a55b:free, nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free, nvidia/nemotron-3.5-lightning:free, nvidia/nemotron-3-super-120b-a12b:free, thinkingmachines/inkling:free, poolside/laguna-s-2.1:free';
 
-  let providerId = 'openrouter';
-  let model = OPENROUTER_DEFAULT;
+  let providerId = 'gemini';
+  let model = 'gemini-3.5-flash-lite';
   let apiKey = '';
-  let proxyUrl = '';
+  let proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   let uiLanguage: 'en' | 'id' = 'en';
 
   function handleProviderChange() {
-    if (providerId === 'openrouter') model = OPENROUTER_DEFAULT;
-    else if (providerId === 'openai') model = 'gpt-4o-mini';
-    else if (providerId === 'gemini') model = 'gemini-1.5-flash';
+    if (providerId === 'openrouter') {
+      model = OPENROUTER_DEFAULT;
+      proxyUrl = 'https://openrouter.ai/api/v1/chat/completions';
+    } else if (providerId === 'openai') {
+      model = 'gpt-4o-mini';
+      proxyUrl = 'https://api.openai.com/v1/chat/completions';
+    } else if (providerId === 'gemini') {
+      model = 'gemini-3.5-flash-lite';
+      proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    }
   }
   
   onMount(() => {

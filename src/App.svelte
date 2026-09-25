@@ -5,7 +5,10 @@
   import FileUploader from './components/upload/FileUploader.svelte';
   import SplitLayout from './components/layout/SplitLayout.svelte';
   import SettingsModal from './components/layout/SettingsModal.svelte';
+  import ApiTutorialDrawer from './components/layout/ApiTutorialDrawer.svelte';
   import { t, isLoading } from 'svelte-i18n';
+
+  let showTutorial = false;
 
   function toggleLanguage() {
     const currentLang = uiLanguage.get();
@@ -51,14 +54,51 @@
           </div>
 
           <!-- Bottom Section: Title -->
-          <div class="mb-4 mt-12 lg:mt-0">
+          <div class="mb-4 mt-12 lg:mt-0 max-w-md">
             <h1 class="text-5xl md:text-6xl lg:text-[4rem] leading-none font-medium text-black dark:text-space-textHighlight tracking-tight mb-6">
               Arena <br />
               <span class="text-zinc-500 dark:text-space-textSoft">Proposal.</span>
             </h1>
-            <p class="text-zinc-600 dark:text-space-textMuted text-base md:text-lg max-w-sm leading-relaxed font-light">
+            <p class="text-zinc-600 dark:text-space-textMuted text-base md:text-lg leading-relaxed font-light mb-10">
               {$t('app.subtitle')}
             </p>
+
+            <!-- Action Steps -->
+            <div class="flex flex-col gap-5 mb-10">
+              <div class="flex items-start gap-4">
+                <div class="flex items-center justify-center w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 text-black dark:text-white text-sm font-semibold shrink-0 mt-0.5">1</div>
+                <div class="text-zinc-600 dark:text-zinc-400 text-[0.95rem] leading-relaxed">
+                  <strong class="text-black dark:text-white font-medium block">{$t('app.steps.step1Title')}</strong>
+                  {$t('app.steps.step1Desc')}
+                </div>
+              </div>
+              
+              <div class="flex items-start gap-4">
+                <div class="flex items-center justify-center w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 text-black dark:text-white text-sm font-semibold shrink-0 mt-0.5">2</div>
+                <div class="text-zinc-600 dark:text-zinc-400 text-[0.95rem] leading-relaxed">
+                  <strong class="text-black dark:text-white font-medium block">{$t('app.steps.step2Title')}</strong>
+                  {$t('app.steps.step2Desc')}
+                </div>
+              </div>
+              
+              <div class="flex items-start gap-4">
+                <div class="flex items-center justify-center w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 text-black dark:text-white text-sm font-semibold shrink-0 mt-0.5">3</div>
+                <div class="text-zinc-600 dark:text-zinc-400 text-[0.95rem] leading-relaxed">
+                  <strong class="text-black dark:text-white font-medium block">{$t('app.steps.step3Title')}</strong>
+                  {$t('app.steps.step3Desc')}
+                </div>
+              </div>
+            </div>
+
+            <button 
+              on:click={() => showTutorial = true}
+              class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-black dark:text-white bg-zinc-100 dark:bg-zinc-800/60 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-lg transition-colors shadow-sm"
+            >
+              <svg class="w-4 h-4 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              {$t('tutorial.getApiKey')}
+            </button>
           </div>
         </div>
 
@@ -73,4 +113,6 @@
   {#if $showSettings}
     <SettingsModal bind:isOpen={$showSettings} />
   {/if}
+
+  <ApiTutorialDrawer bind:isOpen={showTutorial} />
 {/if}

@@ -16,25 +16,27 @@
   function handleDrop(e: DragEvent) {
     e.preventDefault();
     dragOver = false;
-    if (e.dataTransfer?.files.length) {
-      handleFiles(e.dataTransfer.files[0]);
+    if (e.dataTransfer?.files?.length) {
+      const selected = e.dataTransfer.files[0];
+      if (selected) handleFiles(selected);
     }
   }
 
   function handleFileChange(e: Event) {
     const target = e.target as HTMLInputElement;
     if (target.files?.length) {
-      handleFiles(target.files[0]);
+      const selected = target.files[0];
+      if (selected) handleFiles(selected);
     }
   }
 
   function handleFiles(selectedFile: File) {
-    const validTypes = ["application/pdf", "text/plain"];
+    const validTypes = ["application/pdf"];
     if (validTypes.includes(selectedFile.type)) {
       file = selectedFile;
       processFile();
     } else {
-      errorStr = "Format file tidak didukung. Harap unggah PDF atau TXT.";
+      errorStr = "Format file tidak didukung. Harap unggah PDF.";
     }
   }
 
@@ -68,9 +70,10 @@
       }
       
       const provider = createAIProvider({
-        providerId: settings.providerId || 'openrouter',
+        providerId: settings.providerId || 'gemini',
         apiKey: settings.apiKey,
-        model: settings.model || 'meta-llama/llama-3.1-8b-instruct:free'
+        model: settings.model || 'gemini-3.5-flash-lite',
+        proxyUrl: settings.proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
       });
       
       const analysis = await analyzeProposal(provider, text, language);
@@ -94,9 +97,6 @@
 <style>
   .canvas-dropzone {
     transition: background-color 0.4s ease, border-color 0.4s ease;
-  }
-  .canvas-dropzone.dragover {
-    background-color: #242424;
   }
   /* In light mode dragover, use a different color but tailwind takes care of bg via utilities mostly. We'll use classes instead. */
   .crosshair {
@@ -144,8 +144,8 @@
         {$t('upload.title')}
       {/if}
     </p>
-    <p class="text-zinc-400 dark:text-[#555] text-xs mt-2 font-medium">PDF & TXT (Maks 10MB)</p>
+    <p class="text-zinc-400 dark:text-[#555] text-xs mt-2 font-medium">PDF (Maks 10MB)</p>
   </div>
 
-  <input type="file" bind:this={fileInput} class="hidden" accept=".pdf,.txt" on:change={handleFileChange} />
+  <input type="file" bind:this={fileInput} class="hidden" accept=".pdf" on:change={handleFileChange} />
 </div>

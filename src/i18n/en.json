@@ -7,7 +7,15 @@
     "status": "Status",
     "unknownTitle": "Unknown Title",
     "noText": "No text available.",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "steps": {
+      "step1Title": "Prepare Document",
+      "step1Desc": "Ensure your proposal is in PDF format (Max 10MB).",
+      "step2Title": "Upload File",
+      "step2Desc": "Click or drag the file into the area on the right.",
+      "step3Title": "Start Simulation",
+      "step3Desc": "Configure your AI examiner and begin the defense session."
+    }
   },
   "upload": {
     "title": "Upload Proposal",
@@ -59,5 +67,16 @@
     "weaknesses": "Weaknesses",
     "recommendations": "Recommendations",
     "practice": "Practice Questions"
+  },
+  "tutorial": {
+    "getApiKey": "How to get API KEY?",
+    "title": "How to get Google AI Studio API Key",
+    "step1": "Go to Google AI Studio at aistudio.google.com",
+    "step2": "Sign in with your Google account.",
+    "step3": "Click on 'Get API key' in the left sidebar.",
+    "step4": "Click the 'Create API key' button and follow the prompts.",
+    "step5": "Copy the generated API key.",
+    "step6": "Open the Settings menu in this application and paste the key.",
+    "close": "Close"
   }
 }
