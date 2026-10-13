@@ -49,8 +49,8 @@
       return;
     }
     
-    const lang = $currentProposal?.language || 'en';
-    if (!dictation || (dictation as any).lang !== lang) {
+    const lang = $currentProposal?.language || 'id';
+    if (!dictation || dictation.language !== lang) {
       dictation = new SpeechDictation(
         lang, 
         (res) => { 

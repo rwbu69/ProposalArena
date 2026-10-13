@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Settings, X } from 'lucide-svelte';
-  import { loadSettings, saveSettings } from '../../lib/storage/settings';
+  import { Settings, X, Trash2 } from 'lucide-svelte';
+  import { loadSettings, saveSettings, clearSettings } from '../../lib/storage/settings';
   import { onMount, createEventDispatcher } from 'svelte';
   import { t } from 'svelte-i18n';
   import { uiLanguage as uiLanguageStore } from '../../lib/state/stores';
@@ -15,6 +15,36 @@
   let proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   let uiLanguage: 'en' | 'id' = 'en';
 
+  function initFromStorage() {
+    const s = loadSettings();
+    if (s) {
+      providerId = s.providerId ?? 'gemini';
+      model = s.model ?? 'gemini-3.5-flash-lite';
+      apiKey = s.apiKey ?? '';
+      proxyUrl = s.proxyUrl ?? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      uiLanguage = uiLanguageStore.get() || s.uiLanguage || 'en';
+    } else {
+      providerId = 'gemini';
+      model = 'gemini-3.5-flash-lite';
+      apiKey = '';
+      proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      uiLanguage = uiLanguageStore.get() || 'en';
+    }
+  }
+
+  onMount(() => {
+    initFromStorage();
+  });
+
+  // Re-read storage ONLY when modal transitions from closed to open
+  let lastOpenState = false;
+  $: if (isOpen && !lastOpenState) {
+    lastOpenState = true;
+    initFromStorage();
+  } else if (!isOpen && lastOpenState) {
+    lastOpenState = false;
+  }
+
   function handleProviderChange() {
     if (providerId === 'openrouter') {
       model = OPENROUTER_DEFAULT;
@@ -28,26 +58,24 @@
     }
   }
   
-  onMount(() => {
-    const s = loadSettings();
-    if (s) {
-      providerId = s.providerId || providerId;
-      model = s.model || model;
-      apiKey = s.apiKey || '';
-      proxyUrl = s.proxyUrl || '';
-      uiLanguage = uiLanguageStore.get() || s.uiLanguage || 'en';
-    }
-  });
-  
   function save() {
     saveSettings({
       providerId,
-      model,
-      apiKey,
-      proxyUrl,
+      model: model.trim(),
+      apiKey: apiKey.trim(),
+      proxyUrl: proxyUrl.trim(),
       uiLanguage
     });
     uiLanguageStore.set(uiLanguage);
+    isOpen = false;
+  }
+
+  function handleClear() {
+    clearSettings();
+    providerId = 'gemini';
+    model = 'gemini-3.5-flash-lite';
+    apiKey = '';
+    proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
     isOpen = false;
   }
 
@@ -106,10 +134,32 @@
       </div>
     </div>
     
-    <div class="px-6 py-4 bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
-      <button on:click={save} class="px-6 py-2 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
-        {$t('settings.save')}
+    <div class="px-6 py-4 bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+      <button
+        type="button"
+        on:click={handleClear}
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-900/60 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+      >
+        <Trash2 class="w-3.5 h-3.5" />
+        <span>{$t('settings.clear')}</span>
       </button>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          on:click={close}
+          class="px-4 py-1.5 text-xs text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
+        >
+          {$t('settings.cancel')}
+        </button>
+        <button
+          type="button"
+          on:click={save}
+          class="px-5 py-1.5 bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-mono tracking-wider transition-colors"
+        >
+          {$t('settings.save')}
+        </button>
+      </div>
     </div>
   </div>
 </div>

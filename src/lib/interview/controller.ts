@@ -48,11 +48,12 @@ export async function initSession(proposalId: string) {
 
 function getProvider() {
   const settings = loadSettings();
-  if (!settings || !settings.apiKey) throw new Error("API Key is missing. Please configure settings.");
+  if (!settings || !settings.apiKey) throw new Error("API Key belum dikonfigurasi. Harap isi di Pengaturan (ikon gerigi).");
   return createAIProvider({
-    providerId: settings.providerId || 'openrouter',
+    providerId: settings.providerId || 'gemini',
     apiKey: settings.apiKey,
-    model: settings.model || 'meta-llama/llama-3.1-8b-instruct:free'
+    model: settings.model || 'gemini-3.5-flash-lite',
+    proxyUrl: settings.proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
   });
 }
 
@@ -154,8 +155,12 @@ export async function endInterview() {
     
     // Redirect to standalone report page
     window.location.href = `/report?id=${session.id}`;
-  } catch (e) {
+  } catch (e: any) {
     console.error("Failed to generate report", e);
+    session.state = 'COMPLETED';
+    await dbStore.saveSession(session);
+    currentSession.set(session);
+    alert(`Gagal menyusun catatan bimbingan: ${e?.message || 'Terjadi kesalahan saat memproses laporan.'}`);
   } finally {
     isProcessing.set(false);
   }

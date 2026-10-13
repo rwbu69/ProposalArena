@@ -107,5 +107,9 @@ export const dbStore = {
   async getAllSessions() {
     const db = await openDatabase();
     return db.getAll('interviewSessions');
+  },
+  async getAllReports(): Promise<DefenseReport[]> {
+    const db = await openDatabase();
+    return db.getAll('reports');
   }
 };

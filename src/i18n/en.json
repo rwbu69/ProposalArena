@@ -22,7 +22,11 @@
     "description": "Drag and drop your PDF or TXT file here, or click to select.",
     "selected": "Selected:",
     "start": "Start Defense Simulator",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "balloonTitle": "Upload Proposal PDF",
+    "balloonSubtitle": "PDF • Maximum 10 MB",
+    "dropPrompt": "Drop your PDF file here...",
+    "readingDoc": "Reading proposal document..."
   },
   "settings": {
     "title": "Settings",
@@ -34,7 +38,9 @@
     "proxyHint": "Optional. Override the default API endpoint.",
     "apiKey": "API Key",
     "apiHint": "Stored locally in your browser.",
-    "save": "Save Settings"
+    "save": "Save Settings",
+    "clear": "Clear Settings",
+    "cancel": "Cancel"
   },
   "interview": {
     "start": "Start Defense",
@@ -58,25 +64,48 @@
     "reportWarning": "Session Integrity: You switched tabs or lost window focus {count} times during the defense."
   },
   "report": {
-    "title": "Defense Report",
+    "tag": "Post-Simulation Debrief",
+    "title": "Defense Debrief & Guidance",
+    "subtitle": "Constructive evaluation notes and argument readiness mapping towards your actual proposal defense.",
     "return": "Return to Arena",
-    "loading": "Loading report...",
-    "summary": "Summary",
-    "notes": "Examiner's Notes & Feedback",
-    "strengths": "Strengths",
-    "weaknesses": "Weaknesses",
-    "recommendations": "Recommendations",
-    "practice": "Practice Questions"
+    "print": "Print / Save as PDF",
+    "copyNotes": "Copy Notes",
+    "copied": "Copied!",
+    "loading": "Compiling debrief notes...",
+    "emptyReport": "Debrief notes for this session were not found.",
+    "summary": "Argument & Defense Reflection",
+    "notes": "Delivery Style & Articulation Notes",
+    "strengths": "Solid Foundations",
+    "strengthsDesc": "Points of argument and understanding that are already sharp and should be maintained before the committee.",
+    "weaknesses": "Areas to Strengthen",
+    "weaknessesDesc": "Methodological or conceptual gaps that examiners are likely to scrutinize.",
+    "recommendations": "Action Plan Towards Defense",
+    "recommendationsDesc": "Concrete preparation and revision priorities you can undertake before the actual defense day.",
+    "practice": "Self-Practice Drills",
+    "practiceDesc": "Prompt questions to test the sharpness of your response and research defense logic.",
+    "sessionMeta": "Simulation Context",
+    "date": "Execution Time",
+    "focusNotice": "Session Focus Note"
   },
   "tutorial": {
-    "getApiKey": "How to get API KEY?",
-    "title": "How to get Google AI Studio API Key",
-    "step1": "Go to Google AI Studio at aistudio.google.com",
-    "step2": "Sign in with your Google account.",
-    "step3": "Click on 'Get API key' in the left sidebar.",
-    "step4": "Click the 'Create API key' button and follow the prompts.",
-    "step5": "Copy the generated API key.",
-    "step6": "Open the Settings menu in this application and paste the key.",
-    "close": "Close"
+    "getApiKey": "API Key Guide (Free)",
+    "title": "Gemini API Key Guide",
+    "subtitle": "Get a free API Key from Google AI Studio to run simulations.",
+    "stepOf": "Step {current} of {total}",
+    "step1": "Visit Google AI Studio at aistudio.google.com.",
+    "step1Action": "Open Google AI Studio ↗",
+    "step2": "Sign in using your Google account.",
+    "step3": "Select 'Get API key' from the left navigation sidebar.",
+    "step4": "Click 'Create API key' and copy your generated key token.",
+    "step5": "Open Settings in this application and paste your API key.",
+    "openSettings": "Open Settings Now",
+    "prev": "Previous",
+    "next": "Next",
+    "done": "Done",
+    "close": "Close",
+    "statusConfigured": "API Key Configured",
+    "statusNotConfigured": "API Key Guide (Free)",
+    "badgeFree": "Free Tier",
+    "privacyNote": "Your API key is stored only in your local browser (localStorage) and sent directly to Google."
   }
 }

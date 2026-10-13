@@ -1,13 +1,14 @@
 ---
 import ReportViewer from '../components/interview/ReportViewer.svelte';
-const title = 'Defense Report | Proposal Arena';
+const title = 'Bimbingan & Refleksi Sidang | Proposal Arena';
 ---
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=Lora:ital,wght@0,400..600;1,400&display=swap" rel="stylesheet">
     <title>{title}</title>
     <style is:global>
       /* Noise background texture */
@@ -44,9 +45,26 @@ const title = 'Defense Report | Proposal Arena';
         -webkit-text-fill-color: inherit;
         transition: background-color 5000s ease-in-out 0s;
       }
+      /* Print styles */
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+        body {
+          background: #ffffff !important;
+          color: #000000 !important;
+        }
+        .noise-bg {
+          display: none !important;
+        }
+        .print-break-inside-avoid {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+      }
     </style>
   </head>
-  <body class="bg-white dark:bg-paper-bg min-h-screen">
+  <body class="bg-white dark:bg-space-left min-h-screen">
     <ReportViewer client:only="svelte" />
   </body>
 </html>

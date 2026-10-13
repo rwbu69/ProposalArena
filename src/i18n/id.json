@@ -22,7 +22,11 @@
     "description": "Seret dan lepas file PDF atau TXT Anda ke sini, atau klik untuk memilih.",
     "selected": "Terpilih:",
     "start": "Mulai Simulasi Sidang",
-    "processing": "Memproses..."
+    "processing": "Memproses...",
+    "balloonTitle": "Unggah PDF Proposal",
+    "balloonSubtitle": "PDF • Maksimal 10 MB",
+    "dropPrompt": "Lepaskan file PDF di sini...",
+    "readingDoc": "Membaca dokumen proposal..."
   },
   "settings": {
     "title": "Pengaturan",
@@ -34,7 +38,9 @@
     "proxyHint": "Opsional. Timpa titik akhir API bawaan.",
     "apiKey": "Kunci API",
     "apiHint": "Disimpan secara lokal di browser Anda.",
-    "save": "Simpan Pengaturan"
+    "save": "Simpan Pengaturan",
+    "clear": "Hapus Pengaturan",
+    "cancel": "Batal"
   },
   "interview": {
     "start": "Mulai Ujian",
@@ -58,25 +64,48 @@
     "reportWarning": "Integritas Sesi: Anda berpindah tab atau kehilangan fokus layar sebanyak {count} kali selama sidang."
   },
   "report": {
-    "title": "Laporan Sidang",
+    "tag": "Bimbingan Pasca-Simulasi",
+    "title": "Bimbingan & Refleksi Sidang",
+    "subtitle": "Catatan evaluasi konstruktif dan pemetaan kesiapan argumen menuju sidang proposal sebenarnya.",
     "return": "Kembali ke Arena",
-    "loading": "Memuat laporan...",
-    "summary": "Ringkasan",
-    "notes": "Catatan & Umpan Balik Penguji",
-    "strengths": "Kelebihan",
-    "weaknesses": "Kelemahan",
-    "recommendations": "Rekomendasi",
-    "practice": "Latihan Pertanyaan"
+    "print": "Cetak / Simpan PDF",
+    "copyNotes": "Salin Catatan",
+    "copied": "Tersalin!",
+    "loading": "Menyusun catatan bimbingan...",
+    "emptyReport": "Catatan bimbingan untuk sesi ini tidak ditemukan.",
+    "summary": "Refleksi Argumen & Penguasaan Materi",
+    "notes": "Catatan Cara Penyampaian & Artikulasi",
+    "strengths": "Fondasi yang Sudah Kokoh",
+    "strengthsDesc": "Poin-poin argumen yang sudah tajam dan perlu Anda pertahankan di hadapan dewan penguji.",
+    "weaknesses": "Aspek yang Perlu Diperdalam",
+    "weaknessesDesc": "Celah metodologi atau konsep yang berpotensi menjadi fokus pendalaman dewan penguji.",
+    "recommendations": "Langkah Tindak Lanjut Menuju Sidang",
+    "recommendationsDesc": "Prioritas persiapan dan revisi konkret yang dapat Anda kerjakan sebelum hari-H sidang.",
+    "practice": "Latihan Pertanyaan Mandiri",
+    "practiceDesc": "Pertanyaan pemantik untuk menguji ketajaman respon dan pertahanan logika riset Anda.",
+    "sessionMeta": "Konteks Simulasi",
+    "date": "Waktu Pelaksanaan",
+    "focusNotice": "Catatan Fokus Sesi"
   },
   "tutorial": {
-    "getApiKey": "Cara mendapatkan API KEY",
-    "title": "Cara mendapatkan API Key Google AI Studio",
-    "step1": "Kunjungi Google AI Studio di aistudio.google.com",
+    "getApiKey": "Panduan API Key (Gratis)",
+    "title": "Panduan API Key Gemini",
+    "subtitle": "Dapatkan API Key gratis dari Google AI Studio untuk menjalankan simulasi.",
+    "stepOf": "Langkah {current} dari {total}",
+    "step1": "Kunjungi Google AI Studio di aistudio.google.com.",
+    "step1Action": "Buka Google AI Studio ↗",
     "step2": "Masuk menggunakan akun Google Anda.",
-    "step3": "Klik 'Get API key' pada menu di sebelah kiri.",
-    "step4": "Klik tombol 'Create API key' dan ikuti petunjuknya.",
-    "step5": "Salin API key yang telah dibuat.",
-    "step6": "Buka menu Pengaturan pada aplikasi ini dan tempel kunci tersebut.",
-    "close": "Tutup"
+    "step3": "Pilih menu 'Get API key' pada bilah navigasi di sebelah kiri.",
+    "step4": "Klik tombol 'Create API key' dan salin token kunci yang dibuat.",
+    "step5": "Buka menu Pengaturan pada aplikasi ini dan tempelkan kunci Anda.",
+    "openSettings": "Buka Pengaturan Sekarang",
+    "prev": "Sebelumnya",
+    "next": "Selanjutnya",
+    "done": "Selesai",
+    "close": "Tutup",
+    "statusConfigured": "API Key Terpasang",
+    "statusNotConfigured": "Panduan API Key (Gratis)",
+    "badgeFree": "Kuota Gratis",
+    "privacyNote": "Kunci API disimpan hanya di browser lokal Anda (localStorage) dan dikirim langsung ke Google."
   }
 }

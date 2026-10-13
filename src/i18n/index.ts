@@ -1,4 +1,4 @@
-import { init, register } from 'svelte-i18n';
+import { init, register, locale } from 'svelte-i18n';
 import { uiLanguage } from '../lib/state/stores';
 
 register('en', () => import('./en.json'));
@@ -11,16 +11,18 @@ function getBrowserLang() {
   return ['en', 'id'].includes(lang) ? lang : 'en';
 }
 
+const savedLang = typeof localStorage !== 'undefined'
+  ? localStorage.getItem('thesis-defense-simulator:ui-language') || getBrowserLang()
+  : 'en';
+
 init({
   fallbackLocale: 'en',
-  initialLocale: getBrowserLang(),
+  initialLocale: ['en', 'id'].includes(savedLang) ? savedLang : 'en',
 });
 
 // Sync i18n locale with the global store
 uiLanguage.subscribe(($locale: string) => {
   if ($locale) {
-    import('svelte-i18n').then(({ locale }) => {
-      locale.set($locale);
-    });
+    locale.set($locale);
   }
 });

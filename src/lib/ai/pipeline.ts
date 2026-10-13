@@ -2,6 +2,21 @@ import type { AIProvider } from '../../types/ai';
 import type { ProposalAnalysis, InterviewMessage, AnswerEvaluation, DefenseReport } from '../../types/domain';
 import examinerPromptTemplate from '../../prompts/examiner.md?raw';
 
+export function cleanAndParseJson<T>(raw: string): T {
+  let cleaned = raw.trim();
+  // Strip code fences like ```json ... ``` or ``` ... ```
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  }
+  // Extract substring between outermost braces if extra narrative is present
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+  }
+  return JSON.parse(cleaned) as T;
+}
+
 export async function analyzeProposal(provider: AIProvider, text: string, language: 'en' | 'id'): Promise<ProposalAnalysis> {
   const sysLang = language === 'en' ? 'English' : 'Bahasa Indonesia';
   const prompt = `You are a thesis advisor. Analyze the following thesis proposal text. 
@@ -31,7 +46,7 @@ ${text.slice(0, 15000)} // Truncating to avoid token limits for now`;
     temperature: 0.1
   });
 
-  return JSON.parse(response.text) as ProposalAnalysis;
+  return cleanAndParseJson<ProposalAnalysis>(response.text);
 }
 
 export async function generateQuestion(provider: AIProvider, analysis: ProposalAnalysis, transcript: InterviewMessage[], language: 'en' | 'id', difficulty: number): Promise<string> {
@@ -95,23 +110,77 @@ Answer: ${answer}`;
     temperature: 0.1
   });
 
-  return JSON.parse(response.text) as Partial<AnswerEvaluation>;
+  return cleanAndParseJson<Partial<AnswerEvaluation>>(response.text);
+}
+
+function toCleanStringArray(val: any): string[] {
+  if (Array.isArray(val)) {
+    return val.map(item => (typeof item === 'string' ? item.trim() : String(item))).filter(Boolean);
+  }
+  if (typeof val === 'string') {
+    return val
+      .split('\n')
+      .map(line => line.replace(/^[-*•\d\.\)]\s*/, '').trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+export function normalizeDefenseReport(raw: any): DefenseReport {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      id: '',
+      strengths: [],
+      weaknesses: [],
+      recommendations: [],
+      practiceQuestions: [],
+      notes: [],
+      summary: '',
+      generatedAt: Date.now()
+    };
+  }
+
+  return {
+    id: raw.id || '',
+    strengths: toCleanStringArray(raw.strengths || raw.kelebihan || raw.kekuatan),
+    weaknesses: toCleanStringArray(raw.weaknesses || raw.kelemahan || raw.kekurangan),
+    recommendations: toCleanStringArray(raw.recommendations || raw.rekomendasi || raw.saran),
+    practiceQuestions: toCleanStringArray(raw.practiceQuestions || raw.pertanyaanLatihan || raw.pertanyaanPraktik || raw.pertanyaan),
+    notes: toCleanStringArray(raw.notes || raw.catatan),
+    summary: typeof raw.summary === 'string' ? raw.summary : (typeof raw.ringkasan === 'string' ? raw.ringkasan : ''),
+    generatedAt: typeof raw.generatedAt === 'number' ? raw.generatedAt : Date.now()
+  };
 }
 
 export async function generateReport(provider: AIProvider, transcript: InterviewMessage[], language: 'en' | 'id'): Promise<DefenseReport> {
   const sysLang = language === 'en' ? 'English' : 'Bahasa Indonesia';
   const transcriptText = transcript.map(m => `${m.role}: ${m.content}`).join('\n');
   
-  const prompt = `You are a thesis advisor writing a final defense report.
-Analyze the following interview transcript. Write the report in ${sysLang}.
-Return ONLY a valid JSON object with the following schema:
+  const prompt = `You are an experienced, empathetic, and constructive academic thesis advisor and mentor conducting a comprehensive post-defense debrief.
+Your goal is to provide a grounded, constructive, and empowering evaluation of the student's proposal defense rehearsal.
+Analyze the following interview transcript. Write all values/content strictly in ${sysLang}.
+Maintain an encouraging yet rigorous academic tone. Avoid generic slogans or clichés; focus directly on substance, clarity of research logic, and defensibility.
+
+IMPORTANT: The JSON keys MUST remain strictly in English ("strengths", "weaknesses", "recommendations", "practiceQuestions", "notes", "summary"). Do NOT translate the JSON keys into ${sysLang}.
+
+Return ONLY a valid JSON object matching this schema:
 {
-  "strengths": ["String"],
-  "weaknesses": ["String"],
-  "recommendations": ["String"],
-  "practiceQuestions": ["String"],
-  "notes": ["String (Feedback on how the user answered their questions and inputs for improving their defense style)"],
-  "summary": "String"
+  "strengths": [
+    "String: Concrete aspects of the proposal or arguments that were solid, convincing, and well-justified"
+  ],
+  "weaknesses": [
+    "String: Specific areas that need deepening or clarification, explaining what examiners look for and how to strengthen them"
+  ],
+  "recommendations": [
+    "String: Prioritized, actionable next steps for the student to execute before the actual defense day"
+  ],
+  "practiceQuestions": [
+    "String: Targeted drill questions that examiners are likely to raise regarding the identified research gaps"
+  ],
+  "notes": [
+    "String: Constructive feedback on the student's communication clarity, composure, and answer structuring"
+  ],
+  "summary": "String: A reflective narrative synthesis of the student's overall defense readiness, acknowledging their effort while outlining key developmental priorities"
 }
 
 Transcript:
@@ -120,16 +189,17 @@ ${transcriptText}`;
   const response = await provider.generate({
     model: provider.defaultModel,
     messages: [
-      { role: 'system', content: 'You are an expert academic evaluator.' },
+      { role: 'system', content: 'You are an expert academic mentor and thesis advisor focused on constructive student empowerment.' },
       { role: 'user', content: prompt }
     ],
     responseFormat: 'json',
     temperature: 0.2
   });
 
-  const parsed = JSON.parse(response.text);
+  const parsed = cleanAndParseJson<any>(response.text);
+  const normalized = normalizeDefenseReport(parsed);
   return {
-    ...parsed,
+    ...normalized,
     generatedAt: Date.now()
-  } as DefenseReport;
+  };
 }

@@ -22,6 +22,10 @@ export async function extractTextFromFile(file: File): Promise<string> {
       const strings = content.items.map((item: any) => item.str);
       text += strings.join(' ') + '\n';
     }
+
+    if (!text.trim()) {
+      throw new Error("Dokumen PDF tidak memuat teks atau berupa hasil scan gambar tanpa OCR. Harap gunakan PDF dengan teks asli.");
+    }
     
     return text;
   }
