@@ -52,9 +52,9 @@
     </div>
 
     <!-- Viewer Content Area -->
-    <div class="flex-1 flex overflow-hidden border-t border-zinc-200 dark:border-space-borderSoft bg-zinc-50 dark:bg-space-viewer relative">
+    <div data-pdf-viewer="true" class="flex-1 flex overflow-hidden border-t border-zinc-200 dark:border-space-borderSoft bg-zinc-50 dark:bg-space-viewer relative">
       {#if pdfUrl}
-        <embed src={pdfUrl} type="application/pdf" class="w-full h-full" />
+        <embed id="proposal-pdf-embed" src={pdfUrl} type="application/pdf" class="w-full h-full" />
       {:else}
         <!-- Paper Mockup -->
         <div class="flex-1 overflow-y-auto doc-scroll flex justify-center p-4 lg:p-12 relative">

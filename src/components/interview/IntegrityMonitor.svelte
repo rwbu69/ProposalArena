@@ -8,9 +8,18 @@
   import { t } from 'svelte-i18n';
 
   let hideTimeout: any;
+  let blurTimeout: any;
+  let focusInterval: any;
+  let lastInterruptionTime = 0;
+  let wasDocumentFocused = true;
 
   function handleInterruption() {
     if (!$currentSession) return;
+
+    // Prevent duplicate warnings within 1.5 seconds (e.g. concurrent blur and visibilitychange)
+    const now = Date.now();
+    if (now - lastInterruptionTime < 1500) return;
+    lastInterruptionTime = now;
     
     // Increment interruptions
     const updatedSession = { ...$currentSession, interruptions: $currentSession.interruptions + 1 };
@@ -26,6 +35,14 @@
     }, 5000);
   }
 
+  function isEmbeddedViewer(el: Element | null): boolean {
+    if (!el) return false;
+    const tag = el.tagName ? el.tagName.toUpperCase() : '';
+    if (tag === 'EMBED' || tag === 'IFRAME' || tag === 'OBJECT') return true;
+    if (el.closest && (el.closest('[data-pdf-viewer]') || el.closest('#proposal-pdf-embed'))) return true;
+    return false;
+  }
+
   function onVisibilityChange() {
     if (document.hidden) {
       handleInterruption();
@@ -33,17 +50,58 @@
   }
 
   function onBlur() {
-    handleInterruption();
+    if (blurTimeout) clearTimeout(blurTimeout);
+
+    blurTimeout = setTimeout(() => {
+      if (typeof document === 'undefined') return;
+
+      // When clicking inside an embedded PDF (<embed> or <iframe>),
+      // the window dispatches a blur event, but the document or inner embedded viewer retains focus.
+      if (document.hasFocus() || isEmbeddedViewer(document.activeElement)) {
+        return;
+      }
+
+      handleInterruption();
+    }, 150);
+  }
+
+  function onFocus() {
+    if (blurTimeout) {
+      clearTimeout(blurTimeout);
+      blurTimeout = null;
+    }
+    wasDocumentFocused = true;
   }
 
   onMount(() => {
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+
+    // Heartbeat check in case user switches applications while focus was inside the embedded viewer
+    focusInterval = setInterval(() => {
+      if (typeof document === 'undefined') return;
+      const hasFocus = document.hasFocus();
+
+      if (!hasFocus && wasDocumentFocused) {
+        wasDocumentFocused = false;
+        if (!isEmbeddedViewer(document.activeElement) || !document.hasFocus()) {
+          handleInterruption();
+        }
+      } else if (hasFocus && !wasDocumentFocused) {
+        wasDocumentFocused = true;
+      }
+    }, 500);
   });
 
   onDestroy(() => {
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibilityChange);
-    if (typeof window !== 'undefined') window.removeEventListener('blur', onBlur);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+    }
+    if (blurTimeout) clearTimeout(blurTimeout);
+    if (focusInterval) clearInterval(focusInterval);
     if (hideTimeout) clearTimeout(hideTimeout);
   });
 </script>
