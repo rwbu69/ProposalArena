@@ -5,7 +5,7 @@ import { dbStore } from '../db/database';
 import { generateQuestion, evaluateAnswer, generateReport } from '../ai/pipeline';
 import { createAIProvider } from '../ai/provider';
 import { loadSettings } from '../storage/settings';
-import { voiceEnabled } from '../state/stores';
+import { voiceEnabled, handsFreeEnabled } from '../state/stores';
 import { speak } from '../voice/speech';
 
 export const currentSession = atom<InterviewSession | null>(null);
@@ -71,7 +71,7 @@ export async function askNextQuestion() {
     
     await addMessage('assistant', question);
     
-    if (voiceEnabled.get()) {
+    if (voiceEnabled.get() && !handsFreeEnabled.get()) {
       speak(question, proposal.language);
     }
     

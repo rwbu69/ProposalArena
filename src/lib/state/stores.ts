@@ -11,3 +11,12 @@ export const voiceEnabled = persistentAtom<boolean>('thesis-defense-simulator:vo
 export const isInterviewActive = atom<boolean>(false);
 export const integrityWarnings = atom<string | null>(null);
 export const showSettings = atom<boolean>(false);
+
+export const isPermissionPromptActive = atom<boolean>(false);
+export const handsFreeEnabled = atom<boolean>(false);
+export const handsFreePrivacyAcknowledged = persistentAtom<boolean>('thesis-defense-simulator:hands-free-ack', false, {
+  encode: JSON.stringify,
+  decode: JSON.parse
+});
+
+

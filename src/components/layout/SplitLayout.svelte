@@ -30,39 +30,38 @@
 
 <IntegrityMonitor />
 
-<div class="flex flex-col lg:flex-row w-full h-full min-h-0 overflow-hidden bg-white dark:bg-space-left font-sans">
+<div class="flex flex-col lg:flex-row w-full h-full min-h-0 overflow-hidden bg-paper dark:bg-paper-dark font-sans text-ink dark:text-ink-dark">
   <!-- LEFT PANEL: PDF / Document Viewer (50% width) -->
-  <div class="w-full lg:w-[50%] h-[50vh] lg:h-full bg-white dark:bg-space-left flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-space-border relative">
+  <div class="w-full lg:w-[50%] h-[50vh] lg:h-full bg-paper dark:bg-paper-dark flex flex-col border-b lg:border-b-0 lg:border-r border-hairline dark:border-hairline-dark relative">
     
     <!-- Viewer Header -->
-    <div class="p-6 lg:p-8 pb-4 flex justify-between items-end shrink-0 z-10">
-      <div>
-        <p class="text-zinc-500 dark:text-space-textMuted text-[10px] uppercase tracking-[0.2em] mb-2 font-medium">
+    <div class="px-6 py-4 border-b border-hairline dark:border-hairline-dark flex justify-between items-center shrink-0 z-10 bg-paper dark:bg-paper-dark">
+      <div class="min-w-0 pr-4">
+        <span class="text-[10px] uppercase tracking-widest font-mono text-ink-faint dark:text-ink-faint-dark block mb-0.5">
           {$t('app.document')}
-        </p>
-        <h2 class="text-black dark:text-space-textHighlight text-lg lg:text-xl font-medium tracking-tight">
+        </span>
+        <h2 class="font-serif text-sm sm:text-base font-normal tracking-tight text-ink dark:text-ink-dark truncate">
           {$currentProposal?.title || $t('app.unknownTitle')}
         </h2>
       </div>
 
-      <!-- Minimalist Toolbar -->
-      <div class="flex gap-4 text-zinc-500 dark:text-space-textMuted text-sm items-center">
-        <span class="text-zinc-600 dark:text-space-textSoft font-mono text-xs hidden sm:inline">100%</span>
+      <div class="flex items-center gap-3 text-ink-faint dark:text-ink-faint-dark font-mono text-xs shrink-0">
+        <span>PDF</span>
       </div>
     </div>
 
     <!-- Viewer Content Area -->
-    <div data-pdf-viewer="true" class="flex-1 flex overflow-hidden border-t border-zinc-200 dark:border-space-borderSoft bg-zinc-50 dark:bg-space-viewer relative">
+    <div data-pdf-viewer="true" class="flex-1 flex overflow-hidden bg-paper-surface dark:bg-paper-surface-dark relative">
       {#if pdfUrl}
         <embed id="proposal-pdf-embed" src={pdfUrl} type="application/pdf" class="w-full h-full" />
       {:else}
-        <!-- Paper Mockup -->
-        <div class="flex-1 overflow-y-auto doc-scroll flex justify-center p-4 lg:p-12 relative">
-          <div class="bg-white dark:bg-[#dcdcdc] w-full max-w-[650px] min-h-[900px] shadow-sm dark:shadow-2xl p-10 md:p-16 text-[#1a1a1a] font-serif flex flex-col items-center cursor-text border border-zinc-200 dark:border-none">
-            <h1 class="text-xl md:text-2xl font-bold tracking-wide mt-12 mb-24 text-center">
-              DOKUMEN PROPOSAL
+        <!-- Clean Editorial Paper Fallback -->
+        <div class="flex-1 overflow-y-auto doc-scroll p-8 sm:p-14 lg:p-16 flex justify-center">
+          <div class="w-full max-w-xl text-ink dark:text-ink-dark font-serif space-y-6">
+            <h1 class="text-xl sm:text-2xl font-normal tracking-tight pb-4 border-b border-hairline dark:border-hairline-dark">
+              {$currentProposal?.title || 'Dokumen Proposal'}
             </h1>
-            <div class="prose prose-sm md:prose-base max-w-none w-full text-[#1a1a1a] whitespace-pre-wrap text-left leading-relaxed">
+            <div class="prose dark:prose-invert max-w-none text-ink dark:text-ink-dark font-serif text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
               {$currentProposal?.text || $t('app.noText')}
             </div>
           </div>
@@ -71,31 +70,41 @@
     </div>
   </div>
 
-  <!-- RIGHT PANEL: Arena Ujian (50% width) -->
-  <div class="w-full lg:w-[50%] h-[50vh] lg:h-full bg-zinc-50 dark:bg-space-right relative flex flex-col justify-between">
-    <div class="noise-bg"></div>
-
-    <!-- Top Navigation & Status -->
-    <div class="p-6 lg:p-8 flex justify-between items-start z-10 shrink-0">
+  <!-- RIGHT PANEL: Arena Ujian / Examination Chamber (50% width) -->
+  <div class="w-full lg:w-[50%] h-[50vh] lg:h-full bg-paper dark:bg-paper-dark relative flex flex-col justify-between">
+    
+    <!-- Top Header -->
+    <div class="px-6 py-4 border-b border-hairline dark:border-hairline-dark flex justify-between items-center shrink-0 z-10 bg-paper dark:bg-paper-dark">
       <div>
-        <span class="text-black dark:text-space-textHighlight text-lg font-medium tracking-tight">
+        <span class="font-serif text-sm sm:text-base font-normal tracking-tight text-ink dark:text-ink-dark">
           {$t('app.interview')}
         </span>
       </div>
 
-      <!-- Global Actions -->
-      <div class="flex gap-5 text-zinc-500 dark:text-space-textMuted items-center">
-        <button on:click={goHome} class="hover:text-black dark:hover:text-space-textHighlight transition-colors" title="Keluar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <!-- Actions -->
+      <div class="flex items-center gap-4 text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
+        <button
+          on:click={goHome}
+          class="hover:text-ink dark:hover:text-ink-dark transition-colors"
+          title="Keluar / Home"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
         </button>
-        <button on:click={toggleLanguage} class="text-[11px] uppercase tracking-wider font-medium hover:text-black dark:hover:text-space-textHighlight transition-colors">
+        <button
+          on:click={toggleLanguage}
+          class="hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider"
+        >
           {$uiLanguage}
         </button>
-        <button on:click={() => $showSettings = true} class="hover:text-black dark:hover:text-space-textHighlight transition-colors" title="Pengaturan">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <button
+          on:click={() => $showSettings = true}
+          class="hover:text-ink dark:hover:text-ink-dark transition-colors p-1"
+          title={$t('settings.title')}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
@@ -103,11 +112,13 @@
       </div>
     </div>
     
+    <!-- Dialogue Area -->
     <div class="flex-1 flex flex-col relative z-10 overflow-hidden h-full">
       <ChatWindow />
     </div>
     
-    <div class="relative z-10 shrink-0">
+    <!-- Input & Controls Area -->
+    <div class="relative z-10 shrink-0 border-t border-hairline dark:border-hairline-dark bg-paper dark:bg-paper-dark">
       <Controls />
     </div>
   </div>

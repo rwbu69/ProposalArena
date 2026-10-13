@@ -31,6 +31,9 @@
   "settings": {
     "title": "Settings",
     "theme": "Theme",
+    "themeSystem": "System Default",
+    "themeLight": "Light (Paper)",
+    "themeDark": "Dark (Carbon)",
     "language": "UI Language",
     "provider": "AI Provider",
     "model": "Model Name (comma-separated for fallback)",
@@ -56,7 +59,22 @@
     "dictationUnsupported": "Speech recognition is not supported in this browser. Try Chrome.",
     "mute": "Mute Examiner",
     "listen": "Listen to Examiner",
-    "dictate": "Dictate Answer"
+    "dictate": "Dictate Answer",
+    "handsFreeToggle": "Hands-Free Defense",
+    "handsFreeActive": "Hands-Free Active",
+    "switchToTyping": "Switch to Typing",
+    "examinerSpeaking": "Examiner is speaking...",
+    "examinerThinking": "Examiner is evaluating & thinking...",
+    "listeningAnswer": "Listening to your answer...",
+    "sendingCountdown": "Sending in {seconds}s...",
+    "handsFreeLiveSpeech": "Speaking (Live Transcript)",
+    "handsFreePrivacyTitle": "Hands-Free Defense & Voice Processing",
+    "handsFreePrivacyDesc": "Hands-Free mode uses your browser's Web Speech API for real-time speech recognition. In some browsers (such as Google Chrome), voice audio may be processed on vendor servers (e.g. Google) for speech-to-text conversion. Your thesis document and evaluation remain private and local. You can pause or stop hands-free mode at any time.",
+    "handsFreePrivacyAccept": "Enable Hands-Free Defense",
+    "handsFreePrivacyCancel": "Cancel",
+    "handsFreeUnsupported": "Speech recognition is not supported in this browser. Please use Chrome or Edge.",
+    "handsFreePermissionDenied": "Microphone permission denied. Falling back to typing mode.",
+    "silenceAutoSubmit": "[Candidate remained silent / No response provided within 30 seconds]"
   },
   "integrity": {
     "title": "Session Integrity",

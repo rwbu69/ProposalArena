@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { currentSession } from '../../lib/interview/controller';
-  import { integrityWarnings } from '../../lib/state/stores';
+  import { integrityWarnings, isPermissionPromptActive } from '../../lib/state/stores';
   import { dbStore } from '../../lib/db/database';
   import { AlertTriangle } from 'lucide-svelte';
   import { get } from 'svelte/store';
@@ -15,8 +15,10 @@
 
   function handleInterruption() {
     if (!$currentSession) return;
+    if ($isPermissionPromptActive) return;
 
     // Prevent duplicate warnings within 1.5 seconds (e.g. concurrent blur and visibilitychange)
+
     const now = Date.now();
     if (now - lastInterruptionTime < 1500) return;
     lastInterruptionTime = now;
@@ -107,12 +109,11 @@
 </script>
 
 {#if $integrityWarnings}
-  <div class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-8 duration-300">
-    <div class="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 border-l-4 border-l-black dark:border-l-white text-black dark:text-white p-4 shadow-xl flex items-start gap-3 max-w-md">
-      <AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5" />
+  <div class="fixed top-12 left-1/2 transform -translate-x-1/2 z-50">
+    <div class="bg-paper dark:bg-paper-dark border border-hairline dark:border-hairline-dark text-ink dark:text-ink-dark p-4 shadow-none flex items-start gap-3 max-w-md">
       <div>
-        <h3 class="font-bold text-sm">{$t('integrity.title')}</h3>
-        <p class="text-sm mt-1 text-zinc-600 dark:text-zinc-400">{$integrityWarnings}</p>
+        <h3 class="font-serif text-sm font-normal text-ink dark:text-ink-dark">{$t('integrity.title')}</h3>
+        <p class="text-xs mt-1 text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">{$integrityWarnings}</p>
       </div>
     </div>
   </div>

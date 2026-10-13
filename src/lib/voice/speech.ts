@@ -35,28 +35,77 @@ function findBestVoice(lang: 'en' | 'id'): SpeechSynthesisVoice | null {
   }
 }
 
-export function speak(text: string, lang: 'en' | 'id' = 'id') {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  
-  // Cancel any ongoing speech
-  window.speechSynthesis.cancel();
-  
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang === 'en' ? 'en-US' : 'id-ID';
-  utterance.rate = 1.0;
+export interface SpeakOptions {
+  onStart?: () => void;
+  onEnd?: () => void;
+  onError?: (err: any) => void;
+}
 
-  const matchedVoice = findBestVoice(lang);
-  if (matchedVoice) {
-    utterance.voice = matchedVoice;
-  }
-  
-  window.speechSynthesis.speak(utterance);
+export function isSpeaking(): boolean {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return false;
+  return window.speechSynthesis.speaking;
+}
+
+export function speak(
+  text: string,
+  lang: 'en' | 'id' = 'id',
+  options?: SpeakOptions
+): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      options?.onEnd?.();
+      resolve();
+      return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    if (!text || !text.trim()) {
+      options?.onEnd?.();
+      resolve();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang === 'en' ? 'en-US' : 'id-ID';
+    utterance.rate = 1.0;
+
+    const matchedVoice = findBestVoice(lang);
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
+    }
+
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      options?.onEnd?.();
+      resolve();
+    };
+
+    utterance.onstart = () => {
+      options?.onStart?.();
+    };
+
+    utterance.onend = () => {
+      finish();
+    };
+
+    utterance.onerror = (e) => {
+      options?.onError?.(e);
+      finish();
+    };
+
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 export function stopSpeaking() {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
 }
+
 
 // Wrapper for SpeechRecognition with Indonesian as primary default
 export class SpeechDictation {

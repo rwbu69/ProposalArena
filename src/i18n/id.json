@@ -31,6 +31,9 @@
   "settings": {
     "title": "Pengaturan",
     "theme": "Tema",
+    "themeSystem": "Sistem (Bawaan)",
+    "themeLight": "Terang (Kertas)",
+    "themeDark": "Gelap (Karbon)",
     "language": "Bahasa UI",
     "provider": "Penyedia AI",
     "model": "Nama Model (pisahkan dengan koma untuk cadangan)",
@@ -56,7 +59,22 @@
     "dictationUnsupported": "Pengenalan suara tidak didukung di browser ini. Cobalah menggunakan Chrome.",
     "mute": "Bisukan Penguji",
     "listen": "Dengarkan Penguji",
-    "dictate": "Diktekan Jawaban"
+    "dictate": "Diktekan Jawaban",
+    "handsFreeToggle": "Sidang Bebas Tangan",
+    "handsFreeActive": "Bebas Tangan Aktif",
+    "switchToTyping": "Beralih ke Mengetik",
+    "examinerSpeaking": "Penguji sedang berbicara...",
+    "examinerThinking": "Penguji sedang mengevaluasi & berpikir...",
+    "listeningAnswer": "Mendengarkan jawaban Anda...",
+    "sendingCountdown": "Mengirim dalam {seconds} dtk...",
+    "handsFreeLiveSpeech": "Berbicara (Transkripsi Langsung)",
+    "handsFreePrivacyTitle": "Mode Bebas Tangan & Privasi Suara",
+    "handsFreePrivacyDesc": "Mode Bebas Tangan menggunakan Web Speech API peramban untuk pengenalan suara waktu-nyata. Pada sebagian peramban (seperti Google Chrome), suara dapat diproses pada server vendor (misalnya Google) untuk konversi suara-ke-teks. Dokumen proposal dan catatan ujian Anda tetap privat dan tersimpan lokal. Anda dapat menjeda atau menghentikan mode bebas tangan kapan saja.",
+    "handsFreePrivacyAccept": "Aktifkan Mode Bebas Tangan",
+    "handsFreePrivacyCancel": "Batal",
+    "handsFreeUnsupported": "Pengenalan suara tidak didukung di peramban ini. Silakan gunakan Chrome atau Edge.",
+    "handsFreePermissionDenied": "Izin mikrofon ditolak. Kembali ke mode mengetik.",
+    "silenceAutoSubmit": "[Kandidat terdiam / Tidak memberikan jawaban dalam 30 detik]"
   },
   "integrity": {
     "title": "Integritas Sesi",
