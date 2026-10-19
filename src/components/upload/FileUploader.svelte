@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { fade } from "svelte/transition";
   import {
     extractTextFromFile,
     detectLanguage,
@@ -15,11 +17,38 @@
   import { v4 as uuidv4 } from "uuid";
   import { t } from "svelte-i18n";
   import { showSettings } from "../../lib/state/stores";
+  import Icon from "../common/Icon.svelte";
 
   let dragOver = false;
   let file: File | null = null;
   let errorStr = "";
   let fileInput: HTMLInputElement;
+  let showPrivacyDetails = false;
+  let providerName = "Google Gemini";
+  let processingStage: "" | "reading" | "saving" | "analyzing" = "";
+  let extractedText = "";
+  let extractedFileData: ArrayBuffer | undefined;
+  let detectedLanguage: "en" | "id" = "en";
+  let showLanguageConfirmation = false;
+
+  function errorMessage(error: unknown) {
+    return error instanceof Error ? error.message : $t("upload.errorUnknown");
+  }
+
+  function updateProviderName() {
+    const s = loadSettings();
+    if (s?.providerId === "openrouter") providerName = "OpenRouter";
+    else if (s?.providerId === "openai") providerName = "OpenAI";
+    else providerName = "Google Gemini";
+  }
+
+  onMount(() => {
+    updateProviderName();
+  });
+
+  $: if (!$showSettings) {
+    updateProviderName();
+  }
 
   function handleDrop(e: DragEvent) {
     e.preventDefault();
@@ -44,7 +73,7 @@
       file = selectedFile;
       processFile();
     } else {
-      errorStr = "Hanya berkas format PDF yang didukung. Harap unggah proposal dalam format PDF.";
+      errorStr = $t("upload.errorPdfOnly");
     }
   }
 
@@ -53,31 +82,44 @@
     $isProcessing = true;
     errorStr = "";
     try {
-      const text = await extractTextFromFile(file);
-      const language = detectLanguage(text);
-
-      let fileData: ArrayBuffer | undefined = undefined;
+      processingStage = "reading";
+      extractedText = await extractTextFromFile(file);
+      detectedLanguage = detectLanguage(extractedText);
       if (file.name.toLowerCase().endsWith(".pdf")) {
-        fileData = await file.arrayBuffer();
+        extractedFileData = await file.arrayBuffer();
       }
+      showLanguageConfirmation = true;
+      processingStage = "";
+      $isProcessing = false;
+    } catch (e: unknown) {
+      errorStr = errorMessage(e);
+      processingStage = "";
+      $isProcessing = false;
+    }
+  }
 
+  async function continueWithLanguage(language: "en" | "id") {
+    if (!file || !extractedText) return;
+    detectedLanguage = language;
+    showLanguageConfirmation = false;
+    $isProcessing = true;
+    errorStr = "";
+    try {
+      processingStage = "saving";
       const proposal = {
         id: uuidv4(),
         title: file.name,
-        text,
-        fileData,
+        text: extractedText,
+        fileData: extractedFileData,
         language,
         uploadedAt: Date.now(),
       };
-
       await dbStore.saveProposal(proposal);
 
       const settings = loadSettings();
       if (!settings?.apiKey || settings.apiKey.trim().length < 5) {
         $showSettings = true;
-        throw new Error(
-          "API Key belum dikonfigurasi. Harap masukkan API Key Gemini Anda di Pengaturan.",
-        );
+        throw new Error($t("upload.errorNoApiKey"));
       }
 
       const provider = createAIProvider({
@@ -89,7 +131,8 @@
           "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       });
 
-      const analysis = await analyzeProposal(provider, text, language);
+      processingStage = "analyzing";
+      const analysis = await analyzeProposal(provider, extractedText, language);
       analysis.id = proposal.id;
       analysis.analyzedAt = Date.now();
       await dbStore.saveAnalysis(analysis);
@@ -98,10 +141,11 @@
       await initSession(proposal.id);
 
       const { globalIndexer } = await import("../../lib/search/indexer");
-      globalIndexer.indexProposal(proposal.id, text);
-    } catch (e: any) {
-      errorStr = e.message;
+      globalIndexer.indexProposal(proposal.id, extractedText);
+    } catch (e: unknown) {
+      errorStr = errorMessage(e);
     } finally {
+      processingStage = "";
       $isProcessing = false;
     }
   }
@@ -125,24 +169,72 @@
       ? 'border-ink dark:border-ink-dark bg-paper dark:bg-paper-dark'
       : 'hover:border-ink-muted dark:hover:border-ink-muted-dark'}"
   >
-    {#if $isProcessing}
+    {#if showLanguageConfirmation}
+      <div class="space-y-5 w-full" on:click|stopPropagation>
+        <div class="space-y-2">
+          <span class="text-[10px] font-mono uppercase tracking-widest text-ink-faint dark:text-ink-faint-dark">
+            {$t("upload.languageLabel")}
+          </span>
+          <h2 class="font-serif text-2xl text-ink dark:text-ink-dark">
+            {$t("upload.languageTitle")}
+          </h2>
+          <p class="text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed">
+            {$t("upload.languageDescription")}
+          </p>
+        </div>
+        <div class="border-y border-hairline dark:border-hairline-dark py-3 flex items-center justify-between">
+          <span class="text-sm text-ink dark:text-ink-dark">
+            {detectedLanguage === "id" ? "Bahasa Indonesia" : "English"}
+          </span>
+          <span class="text-[10px] font-mono uppercase tracking-widest text-ink-faint dark:text-ink-faint-dark">
+            {$t("upload.languageDetected")}
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" on:click={() => (detectedLanguage = "en")} class="px-3 py-2 border text-left text-xs font-mono rounded-xs {detectedLanguage === 'en' ? 'border-accent bg-accent/10 text-ink dark:text-ink-dark' : 'border-hairline dark:border-hairline-dark text-ink-muted dark:text-ink-muted-dark'}">
+            English
+          </button>
+          <button type="button" on:click={() => (detectedLanguage = "id")} class="px-3 py-2 border text-left text-xs font-mono rounded-xs {detectedLanguage === 'id' ? 'border-accent bg-accent/10 text-ink dark:text-ink-dark' : 'border-hairline dark:border-hairline-dark text-ink-muted dark:text-ink-muted-dark'}">
+            Bahasa Indonesia
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" on:click={() => continueWithLanguage(detectedLanguage)} class="px-4 py-2 bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark text-xs font-mono rounded-xs">
+            {$t("upload.languageContinue")}
+          </button>
+        </div>
+      </div>
+    {:else if $isProcessing}
       <!-- QUIET PROCESSING STATE -->
       <div class="space-y-3 w-full">
         <div class="flex items-center gap-2.5">
           <span class="inline-block w-2 h-2 rounded-full bg-accent dark:bg-accent-dark animate-pulse"></span>
           <span class="font-serif text-lg text-ink dark:text-ink-dark font-normal">
-            {$t("upload.readingDoc")}
+            {processingStage === "reading"
+              ? $t("upload.stageReading")
+              : processingStage === "analyzing"
+                ? $t("upload.stageAnalyzing")
+                : processingStage === "saving"
+                  ? $t("upload.stageSaving")
+                  : $t("upload.readingDoc")}
           </span>
         </div>
         <p class="text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
-          Memeriksa struktur metodologi dan konteks riset proposal...
+          {$t("upload.processingHint")}
         </p>
+        <div class="flex gap-2 pt-2 text-[10px] font-mono uppercase tracking-wider text-ink-faint dark:text-ink-faint-dark">
+          <span class={processingStage === "reading" ? "text-accent dark:text-accent-dark" : ""}>{$t("upload.stageReading")}</span>
+          <span>·</span>
+          <span class={processingStage === "analyzing" ? "text-accent dark:text-accent-dark" : ""}>{$t("upload.stageAnalyzing")}</span>
+          <span>·</span>
+          <span class={processingStage === "saving" ? "text-accent dark:text-accent-dark" : ""}>{$t("upload.stageSaving")}</span>
+        </div>
       </div>
     {:else}
       <!-- RESTING / DRAG STATE -->
       <div class="space-y-4 w-full text-left">
         <div class="text-[11px] font-mono uppercase tracking-widest text-ink-faint dark:text-ink-faint-dark">
-          Berkas Proposal
+          {$t("upload.sectionLabel")}
         </div>
 
         <h2 class="font-serif text-2xl sm:text-3xl font-normal text-ink dark:text-ink-dark tracking-tight leading-snug">
@@ -156,13 +248,44 @@
         <div class="pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <button
             type="button"
-            class="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-mono tracking-wider transition-colors"
+            on:click|stopPropagation={() => fileInput.click()}
+            class="inline-flex items-center gap-2.5 px-5 py-2.5 bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark text-xs font-mono tracking-wider transition-colors cursor-pointer rounded-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent-dark focus-visible:ring-offset-2 focus-visible:ring-offset-paper-surface dark:focus-visible:ring-offset-paper-surface-dark"
+            aria-label={$t("upload.selectFileAria")}
           >
-            Pilih Berkas PDF
+            <Icon name="upload" size={16} />
+            <span>{$t("upload.selectFile")}</span>
           </button>
           <span class="text-xs font-mono text-ink-faint dark:text-ink-faint-dark">
-            Maks. 10 MB • PDF
+            {$t("upload.fileLimit")}
           </span>
+        </div>
+
+        <!-- Privacy Note: One quiet sentence directly beneath upload action with inline Detail toggle -->
+        <div
+          class="pt-3 text-xs text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans max-w-md"
+          on:click|stopPropagation
+        >
+          <span>{$t("landing.privacyNote", { values: { provider: providerName } })}</span>
+          {' '}
+          <button
+            type="button"
+            class="underline underline-offset-2 text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors inline cursor-pointer p-0.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+            aria-expanded={showPrivacyDetails}
+            aria-label={$t("landing.privacyDetailAria")}
+            on:click={() => (showPrivacyDetails = !showPrivacyDetails)}
+          >
+            {$t("landing.privacyDetailToggle")}
+          </button>
+
+          {#if showPrivacyDetails}
+            <div
+              transition:fade={{ duration: 150 }}
+              class="mt-2 space-y-1 text-ink-faint dark:text-ink-faint-dark text-[11px] leading-normal"
+            >
+              <p>{$t("landing.privacyDetailStorage")}</p>
+              <p>{$t("landing.privacyDetailPolicy", { values: { provider: providerName } })}</p>
+            </div>
+          {/if}
         </div>
       </div>
     {/if}

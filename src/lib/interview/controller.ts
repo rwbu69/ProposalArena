@@ -7,6 +7,7 @@ import { createAIProvider } from '../ai/provider';
 import { loadSettings } from '../storage/settings';
 import { voiceEnabled, handsFreeEnabled } from '../state/stores';
 import { speak } from '../voice/speech';
+import { transitionSession } from './engine';
 
 export const currentSession = atom<InterviewSession | null>(null);
 export const currentMessages = atom<InterviewMessage[]>([]);
@@ -14,6 +15,19 @@ export const currentProposal = atom<Proposal | null>(null);
 export const currentAnalysis = atom<ProposalAnalysis | null>(null);
 export const currentReport = atom<DefenseReport | null>(null);
 export const isProcessing = atom<boolean>(false);
+export const MAX_QUESTIONS = 10;
+export const selectedTimeLimit = atom<number>(0); // 0 = no timer, 15, 20, 30 minutes
+export const endingStatusMessage = atom<string | null>(null);
+
+export function setTimeLimit(minutes: number) {
+  selectedTimeLimit.set(minutes);
+  const session = currentSession.get();
+  if (session && session.questionIndex === 0) {
+    session.timeLimitMinutes = minutes > 0 ? minutes : undefined;
+    dbStore.saveSession(session);
+    currentSession.set(session);
+  }
+}
 
 export async function loadProposal(proposalId: string) {
   const proposal = await dbStore.getProposal(proposalId);
@@ -24,12 +38,31 @@ export async function loadProposal(proposalId: string) {
   }
 }
 
-export async function initSession(proposalId: string) {
+export async function restoreActiveSession() {
+    const sessions = await dbStore.getActiveSessions();
+    const session = sessions.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+    if (!session) return false;
+
+    const proposal = await dbStore.getProposal(session.proposalId);
+    const analysis = await dbStore.getAnalysis(session.proposalId);
+    if (!proposal || !analysis) return false;
+
+    currentSession.set(session);
+    currentProposal.set(proposal);
+    currentAnalysis.set(analysis);
+    currentMessages.set(await dbStore.getMessages(session.id));
+    const { globalIndexer } = await import('../search/indexer');
+    globalIndexer.indexProposal(proposal.id, proposal.text);
+    return true;
+}
+
+export async function initSession(proposalId: string, timeLimitMinutes?: number) {
   const proposal = await dbStore.getProposal(proposalId);
   if (!proposal) throw new Error("Proposal not found");
   
   currentProposal.set(proposal);
   
+  const limit = timeLimitMinutes !== undefined ? timeLimitMinutes : selectedTimeLimit.get();
   const session: InterviewSession = {
     id: uuidv4(),
     proposalId,
@@ -37,6 +70,7 @@ export async function initSession(proposalId: string) {
     questionIndex: 0,
     difficulty: 3,
     interruptions: 0,
+    timeLimitMinutes: limit > 0 ? limit : undefined,
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -44,6 +78,7 @@ export async function initSession(proposalId: string) {
   await dbStore.saveSession(session);
   currentSession.set(session);
   currentMessages.set([]);
+  endingStatusMessage.set(null);
 }
 
 function getProvider() {
@@ -63,11 +98,28 @@ export async function askNextQuestion() {
   const proposal = currentProposal.get();
   if (!session || !analysis || !proposal) return;
   
+  // Record wall-clock start time on the very first question
+  if (!session.startedAt) {
+    session.startedAt = Date.now();
+    await dbStore.saveSession(session);
+    currentSession.set(session);
+  }
+
   isProcessing.set(true);
   try {
     const provider = getProvider();
     const messages = await dbStore.getMessages(session.id);
-    const question = await generateQuestion(provider, analysis, messages, proposal.language, session.difficulty);
+    let question = await generateQuestion(provider, analysis, messages, proposal.language, session.difficulty);
+    const normalizedQuestion = question.toLowerCase().replace(/\W+/g, ' ').trim();
+    const duplicate = messages.some(message =>
+      message.role === 'assistant' &&
+      message.content.toLowerCase().replace(/\W+/g, ' ').trim() === normalizedQuestion
+    );
+    if (duplicate) {
+      question = proposal.language === 'id'
+        ? 'Mari kita perdalam aspek metodologi yang belum Anda jelaskan dalam proposal.'
+        : 'Let us examine a methodological aspect that you have not yet explained in the proposal.';
+    }
     
     await addMessage('assistant', question);
     
@@ -75,7 +127,9 @@ export async function askNextQuestion() {
       speak(question, proposal.language);
     }
     
-    session.state = 'WAITING_FOR_ANSWER';
+    const questioningSession = transitionSession(session, 'QUESTIONING');
+    const readySession = transitionSession(questioningSession, 'WAITING_FOR_ANSWER');
+    Object.assign(session, readySession);
     session.questionIndex++;
     await dbStore.saveSession(session);
     currentSession.set(session);
@@ -92,7 +146,7 @@ export async function submitAnswer(answer: string) {
   isProcessing.set(true);
   try {
     await addMessage('user', answer);
-    session.state = 'EVALUATING';
+    Object.assign(session, transitionSession(session, 'EVALUATING'));
     await dbStore.saveSession(session);
     currentSession.set(session);
     
@@ -103,10 +157,76 @@ export async function submitAnswer(answer: string) {
       const provider = getProvider();
       const evalResult = await evaluateAnswer(provider, lastQuestion.content, answer, proposal.language);
       
-      // In a full version, we'd save the evalResult to dbStore.saveEvaluation()
-      console.log("Evaluation Result:", evalResult);
+      if (
+        typeof evalResult.correctness === 'number' &&
+        typeof evalResult.relevance === 'number' &&
+        typeof evalResult.depth === 'number' &&
+        typeof evalResult.justification === 'number' &&
+        typeof evalResult.clarity === 'number' &&
+        typeof evalResult.feedback === 'string'
+      ) {
+        await dbStore.saveEvaluation({
+          id: `${session.id}_${lastQuestion.id}`,
+          sessionId: session.id,
+          messageId: lastQuestion.id,
+          correctness: evalResult.correctness,
+          relevance: evalResult.relevance,
+          depth: evalResult.depth,
+          justification: evalResult.justification,
+          clarity: evalResult.clarity,
+          feedback: evalResult.feedback,
+          evaluatedAt: Date.now()
+        });
+        const evaluationAverage = (
+          evalResult.correctness +
+          evalResult.relevance +
+          evalResult.depth +
+          evalResult.justification +
+          evalResult.clarity
+        ) / 5;
+        session.difficulty = Math.max(
+          1,
+          Math.min(5, session.difficulty + (evaluationAverage >= 4 ? 1 : evaluationAverage <= 2 ? -1 : 0))
+        );
+        await dbStore.saveSession(session);
+        currentSession.set(session);
+      }
     }
     
+    // Check whether timer has expired or question limit has been reached
+    let isTimeExpired = false;
+    if (session.timeLimitMinutes && session.startedAt) {
+      const elapsedMinutes = (Date.now() - session.startedAt) / 60000;
+      if (elapsedMinutes >= session.timeLimitMinutes) {
+        isTimeExpired = true;
+      }
+    }
+
+    const isLimitReached = session.questionIndex >= MAX_QUESTIONS;
+
+    if (isLimitReached || isTimeExpired) {
+      const isId = proposal.language === 'id';
+      let endMsg = '';
+      if (isTimeExpired) {
+        endMsg = isId
+          ? 'Waktu habis, sesi diakhiri setelah jawabanmu. Catatan sedang disusun...'
+          : 'Time is up. The session has ended after your answer. Notes are being prepared...';
+      } else {
+        endMsg = isId
+          ? 'Sesi selesai, catatan sedang disusun...'
+          : 'Session complete. Notes are being prepared...';
+      }
+
+      endingStatusMessage.set(endMsg);
+
+      if (voiceEnabled.get()) {
+        speak(endMsg, proposal.language);
+      }
+
+      await endInterview();
+      return;
+    }
+
     // Automatically transition to the next question for MVP
     await askNextQuestion();
   } finally {
@@ -137,7 +257,13 @@ export async function endInterview() {
   
   isProcessing.set(true);
   try {
-    session.state = 'REPORT_GENERATION';
+    if (session.state === 'WAITING_FOR_ANSWER') {
+      Object.assign(session, transitionSession(session, 'EVALUATING'));
+      Object.assign(session, transitionSession(session, 'COMPLETED'));
+    } else if (session.state === 'EVALUATING') {
+      Object.assign(session, transitionSession(session, 'COMPLETED'));
+    }
+    Object.assign(session, transitionSession(session, 'REPORT_GENERATION'));
     await dbStore.saveSession(session);
     currentSession.set(session);
     
@@ -148,7 +274,7 @@ export async function endInterview() {
     report.id = session.id;
     await dbStore.saveReport(report);
     
-    session.state = 'REPORT_READY';
+    Object.assign(session, transitionSession(session, 'REPORT_READY'));
     await dbStore.saveSession(session);
     currentSession.set(session);
     currentReport.set(report);

@@ -1,6 +1,7 @@
 import type { AIProvider } from '../../types/ai';
 import type { ProposalAnalysis, InterviewMessage, AnswerEvaluation, DefenseReport } from '../../types/domain';
 import examinerPromptTemplate from '../../prompts/examiner.md?raw';
+import { validateAnswerEvaluation, validateDefenseReport, validateProposalAnalysis } from './validation';
 
 export function cleanAndParseJson<T>(raw: string): T {
   let cleaned = raw.trim();
@@ -14,7 +15,18 @@ export function cleanAndParseJson<T>(raw: string): T {
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     cleaned = cleaned.slice(firstBrace, lastBrace + 1);
   }
-  return JSON.parse(cleaned) as T;
+
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch (firstError) {
+    // LLMs frequently output trailing commas before ] or } which standard JSON disallows.
+    const sanitized = cleaned.replace(/,\s*([\]}])/g, '$1');
+    try {
+      return JSON.parse(sanitized) as T;
+    } catch {
+      throw firstError;
+    }
+  }
 }
 
 export async function analyzeProposal(provider: AIProvider, text: string, language: 'en' | 'id'): Promise<ProposalAnalysis> {
@@ -38,6 +50,7 @@ ${text.slice(0, 15000)} // Truncating to avoid token limits for now`;
 
   const response = await provider.generate({
     model: provider.defaultModel,
+    language,
     messages: [
       { role: 'system', content: 'You are an expert academic evaluator.' },
       { role: 'user', content: prompt }
@@ -46,7 +59,7 @@ ${text.slice(0, 15000)} // Truncating to avoid token limits for now`;
     temperature: 0.1
   });
 
-  return cleanAndParseJson<ProposalAnalysis>(response.text);
+  return validateProposalAnalysis(cleanAndParseJson<unknown>(response.text));
 }
 
 export async function generateQuestion(provider: AIProvider, analysis: ProposalAnalysis, transcript: InterviewMessage[], language: 'en' | 'id', difficulty: number): Promise<string> {
@@ -74,6 +87,7 @@ export async function generateQuestion(provider: AIProvider, analysis: ProposalA
 
   const response = await provider.generate({
     model: provider.defaultModel,
+    language,
     messages: [
       { role: 'system', content: 'You are a strict but fair thesis examiner. Ask concise, challenging questions.' },
       { role: 'user', content: prompt }
@@ -102,6 +116,7 @@ Answer: ${answer}`;
 
   const response = await provider.generate({
     model: provider.defaultModel,
+    language,
     messages: [
       { role: 'system', content: 'You are a thesis examiner evaluating a student.' },
       { role: 'user', content: prompt }
@@ -110,7 +125,7 @@ Answer: ${answer}`;
     temperature: 0.1
   });
 
-  return cleanAndParseJson<Partial<AnswerEvaluation>>(response.text);
+  return validateAnswerEvaluation(cleanAndParseJson<unknown>(response.text));
 }
 
 function toCleanStringArray(val: any): string[] {
@@ -188,6 +203,7 @@ ${transcriptText}`;
 
   const response = await provider.generate({
     model: provider.defaultModel,
+    language,
     messages: [
       { role: 'system', content: 'You are an expert academic mentor and thesis advisor focused on constructive student empowerment.' },
       { role: 'user', content: prompt }
@@ -196,10 +212,9 @@ ${transcriptText}`;
     temperature: 0.2
   });
 
-  const parsed = cleanAndParseJson<any>(response.text);
-  const normalized = normalizeDefenseReport(parsed);
+  const parsed = cleanAndParseJson<unknown>(response.text);
   return {
-    ...normalized,
+    ...validateDefenseReport(parsed),
     generatedAt: Date.now()
   };
 }

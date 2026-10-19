@@ -2,10 +2,12 @@
   import ChatWindow from '../interview/ChatWindow.svelte';
   import Controls from '../interview/Controls.svelte';
   import IntegrityMonitor from '../interview/IntegrityMonitor.svelte';
-  import { currentProposal, currentSession } from '../../lib/interview/controller';
+  import Icon from '../common/Icon.svelte';
+  import { currentProposal, currentSession, MAX_QUESTIONS } from '../../lib/interview/controller';
   import { uiLanguage, showSettings } from '../../lib/state/stores';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import ConfirmModal from '../common/ConfirmModal.svelte';
   
   let pdfUrl = '';
   $: if ($currentProposal?.fileData) {
@@ -13,10 +15,35 @@
     const blob = new Blob([$currentProposal.fileData], { type: 'application/pdf' });
     pdfUrl = URL.createObjectURL(blob);
   }
+
+  let currentTime = Date.now();
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
+  let mobilePanel: 'proposal' | 'interview' = 'interview';
+  let showExitModal = false;
+
+  onMount(() => {
+    timerInterval = setInterval(() => {
+      currentTime = Date.now();
+    }, 1000);
+  });
   
   onDestroy(() => {
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    if (timerInterval) clearInterval(timerInterval);
   });
+
+  $: timeLimitMinutes = $currentSession?.timeLimitMinutes;
+  $: startedAt = $currentSession?.startedAt;
+
+  $: remainingSeconds = (timeLimitMinutes && startedAt)
+    ? Math.max(0, Math.floor((startedAt + timeLimitMinutes * 60 * 1000 - currentTime) / 1000))
+    : null;
+
+  $: isLastMinute = remainingSeconds !== null && remainingSeconds < 60 && remainingSeconds > 0;
+
+  $: formattedRemainingTime = remainingSeconds !== null
+    ? `${Math.floor(remainingSeconds / 60)}:${(remainingSeconds % 60).toString().padStart(2, '0')}`
+    : '';
 
   function toggleLanguage() {
     const currentLang = uiLanguage.get();
@@ -24,6 +51,11 @@
   }
 
   function goHome() {
+    showExitModal = true;
+  }
+
+  function exitSession() {
+    showExitModal = false;
     window.location.reload();
   }
 </script>
@@ -31,8 +63,28 @@
 <IntegrityMonitor />
 
 <div class="flex flex-col lg:flex-row w-full h-full min-h-0 overflow-hidden bg-paper dark:bg-paper-dark font-sans text-ink dark:text-ink-dark">
+  <div class="lg:hidden shrink-0 flex border-b border-hairline dark:border-hairline-dark bg-paper dark:bg-paper-dark" role="group" aria-label={$t('arena.mobileView')}>
+    <button type="button" on:click={() => (mobilePanel = 'proposal')} class="flex-1 px-3 py-2 text-xs font-mono {mobilePanel === 'proposal' ? 'bg-ink text-paper dark:bg-ink-dark dark:text-paper-dark' : 'text-ink-muted dark:text-ink-muted-dark'}">
+      {$t('arena.proposalView')}
+    </button>
+    <button type="button" on:click={() => (mobilePanel = 'interview')} class="flex-1 px-3 py-2 text-xs font-mono {mobilePanel === 'interview' ? 'bg-ink text-paper dark:bg-ink-dark dark:text-paper-dark' : 'text-ink-muted dark:text-ink-muted-dark'}">
+      {$t('arena.interviewView')}
+    </button>
+  </div>
+
+  {#if showExitModal}
+    <ConfirmModal
+      title={$t('arena.confirmTitle')}
+      message={$t('arena.confirmExit')}
+      confirmLabel={$t('arena.confirmAction')}
+      cancelLabel={$t('settings.cancel')}
+      danger={true}
+      on:confirm={exitSession}
+      on:cancel={() => (showExitModal = false)}
+    />
+  {/if}
   <!-- LEFT PANEL: PDF / Document Viewer (50% width) -->
-  <div class="w-full lg:w-[50%] h-[50vh] lg:h-full bg-paper dark:bg-paper-dark flex flex-col border-b lg:border-b-0 lg:border-r border-hairline dark:border-hairline-dark relative">
+  <div class="w-full lg:w-[50%] h-full bg-paper dark:bg-paper-dark flex flex-col border-b lg:border-b-0 lg:border-r border-hairline dark:border-hairline-dark relative {mobilePanel === 'proposal' ? 'flex' : 'hidden'} lg:flex">
     
     <!-- Viewer Header -->
     <div class="px-6 py-4 border-b border-hairline dark:border-hairline-dark flex justify-between items-center shrink-0 z-10 bg-paper dark:bg-paper-dark">
@@ -71,43 +123,59 @@
   </div>
 
   <!-- RIGHT PANEL: Arena Ujian / Examination Chamber (50% width) -->
-  <div class="w-full lg:w-[50%] h-[50vh] lg:h-full bg-paper dark:bg-paper-dark relative flex flex-col justify-between">
+  <div class="w-full lg:w-[50%] h-full bg-paper dark:bg-paper-dark relative {mobilePanel === 'interview' ? 'flex' : 'hidden'} lg:flex flex-col justify-between">
     
     <!-- Top Header -->
     <div class="px-6 py-4 border-b border-hairline dark:border-hairline-dark flex justify-between items-center shrink-0 z-10 bg-paper dark:bg-paper-dark">
-      <div>
-        <span class="font-serif text-sm sm:text-base font-normal tracking-tight text-ink dark:text-ink-dark">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-wrap">
+        <span class="font-serif text-sm sm:text-base font-normal tracking-tight text-ink dark:text-ink-dark shrink-0">
           {$t('app.interview')}
         </span>
+        {#if $currentSession && $currentSession.questionIndex > 0}
+          <span class="text-xs font-mono text-ink-muted dark:text-ink-muted-dark shrink-0">
+            • {$t('interview.progress', { values: { current: Math.min($currentSession.questionIndex, MAX_QUESTIONS), total: MAX_QUESTIONS } })}
+          </span>
+          {#if formattedRemainingTime}
+            <span
+              class="text-xs font-mono inline-flex items-center gap-1 shrink-0 {isLastMinute ? 'text-amber-700 dark:text-amber-400 font-medium' : 'text-ink-muted dark:text-ink-muted-dark'}"
+              title={$t('interview.timeRemaining')}
+              aria-label={$t('interview.timeRemainingAria', { values: { time: formattedRemainingTime } })}
+            >
+              <Icon name="clock" size={12} class="opacity-70" />
+              <span>{formattedRemainingTime}</span>
+            </span>
+          {/if}
+        {/if}
       </div>
 
       <!-- Actions -->
-      <div class="flex items-center gap-4 text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
+      <div class="flex items-center gap-1.5 text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
         <button
+          type="button"
           on:click={goHome}
-          class="hover:text-ink dark:hover:text-ink-dark transition-colors"
-          title="Keluar / Home"
+          class="w-10 h-10 flex items-center justify-center rounded-xs hover:text-ink dark:hover:text-ink-dark transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          aria-label={$t('arena.exitAria')}
+          title={$t('arena.exitTooltip')}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-          </svg>
+          <Icon name="home" size={16} />
         </button>
         <button
+          type="button"
           on:click={toggleLanguage}
-          class="hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider"
+          class="px-2 py-1.5 rounded-xs hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          aria-label={$t('landing.toggleLanguageAria')}
+          title={$t('landing.toggleLanguage')}
         >
           {$uiLanguage}
         </button>
         <button
-          on:click={() => $showSettings = true}
-          class="hover:text-ink dark:hover:text-ink-dark transition-colors p-1"
+          type="button"
+          on:click={() => ($showSettings = true)}
+          class="w-10 h-10 flex items-center justify-center rounded-xs hover:text-ink dark:hover:text-ink-dark transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          aria-label={$t('landing.settingsAria')}
           title={$t('settings.title')}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
+          <Icon name="settings" size={16} />
         </button>
       </div>
     </div>

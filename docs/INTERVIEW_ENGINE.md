@@ -28,11 +28,12 @@ The exact transition rules are application code, not model instructions.
 
 ## Adaptation
 
-- Strong answer: may increase difficulty.
-- Weak or incomplete answer: may trigger targeted follow-up.
-- Repeated weakness: may revisit the topic.
-- Duplicate detection: avoid asking the same question again.
+The current implementation now changes the difficulty deterministically from validated
+answer scores: high averages increase it, low averages decrease it, and the value is
+clamped to 1-5. Exact duplicate generated questions are replaced with a neutral
+methodology prompt. Targeted follow-up topic selection remains future work.
 
 ## Session data
 
-Track current state, question index, difficulty, transcript references, evaluations, timing where appropriate, and session-integrity events where implemented.
+Track current state, question index, difficulty, transcript references, persisted answer
+evaluations, timing where appropriate, and session-integrity events where implemented.

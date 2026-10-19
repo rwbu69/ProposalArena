@@ -6,6 +6,7 @@
   import { initTheme } from '../../lib/state/theme';
   import type { DefenseReport, InterviewSession, Proposal } from '../../types/domain';
   import { t, isLoading } from 'svelte-i18n';
+  import Icon from '../common/Icon.svelte';
 
   let cleanupTheme: (() => void) | null = null;
   cleanupTheme = initTheme();
@@ -78,10 +79,13 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
         const allReports = await dbStore.getAllReports();
         if (allReports && allReports.length > 0) {
           allReports.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
-          report = allReports[0];
-          id = report.id;
-          if (id) {
-            session = (await dbStore.getSession(id)) || null;
+          const latest = allReports[0];
+          if (latest) {
+            report = latest;
+            id = latest.id;
+            if (id) {
+              session = (await dbStore.getSession(id)) || null;
+            }
           }
         }
       }
@@ -212,34 +216,45 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       <nav class="flex justify-between items-center gap-4 mb-16 pb-4 border-b border-hairline dark:border-hairline-dark no-print">
         <a
           href="/"
-          class="text-xs font-mono text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider"
+          class="inline-flex items-center gap-2 text-xs font-mono text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider px-2 py-1.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          aria-label={$t('report.returnAria')}
         >
-          ← {$t('report.return')}
+          <Icon name="arrow-left" size={14} />
+          <span>{$t('report.return')}</span>
         </a>
 
         {#if report}
-          <div class="flex items-center gap-4 text-xs font-mono">
+          <div class="flex items-center gap-3 text-xs font-mono">
             <button
+              type="button"
               on:click={handleCopyFullReport}
-              class="text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors underline underline-offset-4"
+              class="inline-flex items-center gap-1.5 text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors px-2.5 py-1.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+              aria-label={$t('report.copyNotesAria')}
             >
-              {copied ? $t('report.copied') : $t('report.copyNotes')}
+              <Icon name={copied ? 'check' : 'copy'} size={14} class={copied ? 'text-green-600 dark:text-green-400' : ''} />
+              <span>{copied ? $t('report.copied') : $t('report.copyNotes')}</span>
             </button>
 
             <button
+              type="button"
               on:click={handlePrint}
-              class="px-3 py-1 bg-accent hover:bg-accent-hover text-white transition-colors"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark transition-colors rounded-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent-dark"
+              aria-label={$t('report.printAria')}
             >
-              {$t('report.print')}
+              <Icon name="printer" size={15} />
+              <span>{$t('report.print')}</span>
             </button>
           </div>
         {/if}
       </nav>
 
       {#if isDemo}
-        <div class="mb-12 py-3 px-4 border border-hairline dark:border-hairline-dark bg-paper-surface dark:bg-paper-surface-dark flex justify-between items-center text-xs font-mono text-ink-muted dark:text-ink-muted-dark no-print">
-          <span>Pratinjau Contoh: Belum ada sesi sidang proposal yang diselesaikan di browser ini.</span>
-          <a href="/" class="underline text-ink dark:text-ink-dark hover:opacity-80">Mulai Sidang Baru →</a>
+        <div class="mb-12 py-3 px-4 border border-hairline dark:border-hairline-dark bg-paper-surface dark:bg-paper-surface-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs font-mono text-ink-muted dark:text-ink-muted-dark no-print">
+          <span>{$t('report.demoBanner')}</span>
+          <a href="/" class="inline-flex items-center gap-1 underline text-ink dark:text-ink-dark hover:opacity-80 px-1 py-0.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark">
+            <span>{$t('report.startNewSession')}</span>
+            <Icon name="arrow-right" size={13} />
+          </a>
         </div>
       {/if}
 
@@ -249,8 +264,9 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
           <p class="text-sm font-mono text-ink-muted">
             {$t('report.emptyReport')}
           </p>
-          <a href="/" class="inline-block text-xs font-mono text-ink underline underline-offset-4">
-            {$t('report.return')} →
+          <a href="/" class="inline-flex items-center gap-1.5 text-xs font-mono text-ink underline underline-offset-4 px-1 py-0.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark">
+            <Icon name="arrow-left" size={14} />
+            <span>{$t('report.return')}</span>
           </a>
         </div>
       {:else}
@@ -320,18 +336,22 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
             <!-- Strengths (Solid Foundations) -->
             <div class="space-y-4">
               <div class="border-b border-hairline dark:border-hairline-dark pb-2">
-                <h3 class="font-serif text-lg font-normal text-ink dark:text-ink-dark">
-                  {$t('report.strengths')}
-                </h3>
-                <p class="text-xs text-ink-faint dark:text-ink-faint-dark mt-0.5">
+                <div class="flex items-center gap-2">
+                  <Icon name="check-circle" size={18} class="text-ink dark:text-ink-dark shrink-0" />
+                  <h3 class="font-serif text-lg font-normal text-ink dark:text-ink-dark">
+                    {$t('report.strengths')}
+                  </h3>
+                </div>
+                <p class="text-xs text-ink-faint dark:text-ink-faint-dark mt-1">
                   {$t('report.strengthsDesc')}
                 </p>
               </div>
 
               <ul class="list-none p-0 m-0 space-y-3">
                 {#each report.strengths || [] as strength}
-                  <li class="relative pl-5 before:content-['+'] before:absolute before:left-0 before:text-ink-muted text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">
-                    {strength}
+                  <li class="flex items-start gap-2.5 text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">
+                    <Icon name="check" size={15} class="text-ink dark:text-ink-dark shrink-0 mt-0.5" />
+                    <span>{strength}</span>
                   </li>
                 {/each}
               </ul>
@@ -340,18 +360,22 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
             <!-- Weaknesses (Growth Areas) -->
             <div class="space-y-4">
               <div class="border-b border-hairline dark:border-hairline-dark pb-2">
-                <h3 class="font-serif text-lg font-normal text-ink dark:text-ink-dark">
-                  {$t('report.weaknesses')}
-                </h3>
-                <p class="text-xs text-ink-faint dark:text-ink-faint-dark mt-0.5">
+                <div class="flex items-center gap-2">
+                  <Icon name="alert-circle" size={18} class="text-ink dark:text-ink-dark shrink-0" />
+                  <h3 class="font-serif text-lg font-normal text-ink dark:text-ink-dark">
+                    {$t('report.weaknesses')}
+                  </h3>
+                </div>
+                <p class="text-xs text-ink-faint dark:text-ink-faint-dark mt-1">
                   {$t('report.weaknessesDesc')}
                 </p>
               </div>
 
               <ul class="list-none p-0 m-0 space-y-3">
                 {#each report.weaknesses || [] as weakness}
-                  <li class="relative pl-5 before:content-['−'] before:absolute before:left-0 before:text-ink-faint text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">
-                    {weakness}
+                  <li class="flex items-start gap-2.5 text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">
+                    <Icon name="alert-triangle" size={15} class="text-ink-faint dark:text-ink-faint-dark shrink-0 mt-0.5" />
+                    <span>{weakness}</span>
                   </li>
                 {/each}
               </ul>
@@ -408,11 +432,14 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
                 </div>
 
                 <button
+                  type="button"
                   on:click={() => handleCopyQuestion(pq, i)}
-                  class="no-print shrink-0 text-xs font-mono text-ink-faint hover:text-ink dark:hover:text-ink-dark transition-colors underline underline-offset-2"
-                  title="Salin pertanyaan"
+                  class="no-print inline-flex items-center gap-1.5 shrink-0 text-xs font-mono text-ink-faint hover:text-ink dark:hover:text-ink-dark transition-colors px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+                  aria-label={$t('report.copyQuestionAria')}
+                  title={$t('report.copyQuestionTooltip')}
                 >
-                  {copiedQuestionIndex === i ? 'Tersalin' : 'Salin'}
+                  <Icon name={copiedQuestionIndex === i ? 'check' : 'copy'} size={13} class={copiedQuestionIndex === i ? 'text-green-600 dark:text-green-400' : ''} />
+                  <span>{copiedQuestionIndex === i ? $t('report.copied') : $t('report.copy')}</span>
                 </button>
               </div>
             {/each}

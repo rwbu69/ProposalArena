@@ -70,6 +70,10 @@ export const dbStore = {
     const db = await openDatabase();
     await db.put('proposalAnalyses', analysis);
   },
+  async getAnalysis(id: string) {
+    const db = await openDatabase();
+    return db.get('proposalAnalyses', id);
+  },
   async getSession(id: string) {
     const db = await openDatabase();
     return db.get('interviewSessions', id);
@@ -86,6 +90,16 @@ export const dbStore = {
   async saveMessage(message: InterviewMessage) {
     const db = await openDatabase();
     await db.put('interviewMessages', message);
+  },
+  async saveEvaluation(evaluation: AnswerEvaluation) {
+    const db = await openDatabase();
+    await db.put('answerEvaluations', evaluation);
+  },
+  async getEvaluations(sessionId: string) {
+    const db = await openDatabase();
+    const all = await db.getAll('answerEvaluations');
+    return all.filter(evaluation => evaluation.sessionId === sessionId)
+      .sort((a, b) => a.evaluatedAt - b.evaluatedAt);
   },
   async saveReport(report: DefenseReport) {
     const db = await openDatabase();
@@ -111,5 +125,38 @@ export const dbStore = {
   async getAllReports(): Promise<DefenseReport[]> {
     const db = await openDatabase();
     return db.getAll('reports');
+  },
+  async getActiveSessions(): Promise<InterviewSession[]> {
+    const db = await openDatabase();
+    const sessions = await db.getAll('interviewSessions');
+    return sessions.filter(session => !['REPORT_READY', 'COMPLETED'].includes(session.state));
+  },
+  async exportData() {
+    const db = await openDatabase();
+    const [proposals, analyses, sessions, messages, evaluations, reports, judgments] = await Promise.all([
+      db.getAll('proposals'),
+      db.getAll('proposalAnalyses'),
+      db.getAll('interviewSessions'),
+      db.getAll('interviewMessages'),
+      db.getAll('answerEvaluations'),
+      db.getAll('reports'),
+      db.getAll('judgments')
+    ]);
+    return { proposals, analyses, sessions, messages, evaluations, reports, judgments, exportedAt: Date.now() };
+  },
+  async clearAllData() {
+    const db = await openDatabase();
+    const stores = [
+      'proposals',
+      'proposalAnalyses',
+      'interviewSessions',
+      'interviewMessages',
+      'answerEvaluations',
+      'reports',
+      'judgments'
+    ] as const;
+    const transaction = db.transaction(stores, 'readwrite');
+    await Promise.all(stores.map(store => transaction.objectStore(store).clear()));
+    await transaction.done;
   }
 };

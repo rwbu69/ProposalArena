@@ -3,7 +3,7 @@
   import { currentSession } from '../../lib/interview/controller';
   import { integrityWarnings, isPermissionPromptActive } from '../../lib/state/stores';
   import { dbStore } from '../../lib/db/database';
-  import { AlertTriangle } from 'lucide-svelte';
+  import Icon from '../common/Icon.svelte';
   import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
 
@@ -111,6 +111,7 @@
 {#if $integrityWarnings}
   <div class="fixed top-12 left-1/2 transform -translate-x-1/2 z-50">
     <div class="bg-paper dark:bg-paper-dark border border-hairline dark:border-hairline-dark text-ink dark:text-ink-dark p-4 shadow-none flex items-start gap-3 max-w-md">
+      <Icon name="alert-triangle" size={18} class="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
       <div>
         <h3 class="font-serif text-sm font-normal text-ink dark:text-ink-dark">{$t('integrity.title')}</h3>
         <p class="text-xs mt-1 text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">{$integrityWarnings}</p>

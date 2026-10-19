@@ -3,6 +3,7 @@
   import { t } from 'svelte-i18n';
   import { showSettings } from '../../lib/state/stores';
   import { loadSettings } from '../../lib/storage/settings';
+  import Icon from '../common/Icon.svelte';
 
   let hasApiKey = false;
   let providerName = 'Google Gemini';
@@ -30,23 +31,29 @@
   {#if hasApiKey}
     <div class="flex items-center justify-between text-xs py-2">
       <div class="flex items-center gap-2">
-        <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent dark:bg-accent-dark"></span>
+        <Icon name="key" size={14} class="text-accent dark:text-accent-dark shrink-0" />
         <span class="font-mono text-ink-muted dark:text-ink-muted-dark">API Key:</span>
         <span class="text-ink dark:text-ink-dark font-medium">{providerName}</span>
       </div>
       <button
-        on:click={() => $showSettings = true}
-        class="font-mono text-[11px] text-ink-faint dark:text-ink-faint-dark hover:text-ink dark:hover:text-ink-dark transition-colors underline underline-offset-2"
+        type="button"
+        on:click={() => ($showSettings = true)}
+        class="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-faint dark:text-ink-faint-dark hover:text-ink dark:hover:text-ink-dark transition-colors underline underline-offset-2 px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+        aria-label={$t('landing.settingsAria')}
       >
-        {$t('settings.title')}
+        <Icon name="settings" size={12} />
+        <span>{$t('settings.title')}</span>
       </button>
     </div>
   {:else}
     <div class="py-3 space-y-2">
       <div class="flex items-baseline justify-between">
-        <span class="font-serif text-sm font-medium text-ink dark:text-ink-dark">
-          {$t('tutorial.title')}
-        </span>
+        <div class="flex items-center gap-2">
+          <Icon name="key" size={15} class="text-ink dark:text-ink-dark shrink-0" />
+          <span class="font-serif text-sm font-medium text-ink dark:text-ink-dark">
+            {$t('tutorial.title')}
+          </span>
+        </div>
         <span class="text-[10px] font-mono uppercase tracking-wider text-ink-faint dark:text-ink-faint-dark">
           {$t('tutorial.badgeFree')}
         </span>
@@ -56,19 +63,24 @@
       </p>
       <div class="flex items-center gap-3 pt-1 text-xs">
         <button
-          on:click={() => $showSettings = true}
-          class="font-mono text-xs text-ink dark:text-ink-dark underline underline-offset-4 hover:text-ink-muted dark:hover:text-ink-muted-dark transition-colors"
+          type="button"
+          on:click={() => ($showSettings = true)}
+          class="inline-flex items-center gap-1 font-mono text-xs text-ink dark:text-ink-dark underline underline-offset-4 hover:text-ink-muted dark:hover:text-ink-muted-dark transition-colors px-1.5 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          aria-label={$t('tutorial.openSettingsAria')}
         >
-          {$t('tutorial.openSettings')} →
+          <span>{$t('tutorial.openSettings')}</span>
+          <Icon name="arrow-right" size={12} />
         </button>
         <span class="text-ink-faint dark:text-ink-faint-dark">•</span>
         <a
           href="https://aistudio.google.com"
           target="_blank"
           rel="noopener noreferrer"
-          class="font-mono text-xs text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors"
+          class="inline-flex items-center gap-1 font-mono text-xs text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors px-1.5 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          aria-label="Google AI Studio (eksternal)"
         >
-          Google AI Studio ↗
+          <span>Google AI Studio</span>
+          <Icon name="external-link" size={12} />
         </a>
       </div>
     </div>

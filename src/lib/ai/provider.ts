@@ -2,6 +2,19 @@ import type { AIProvider, AIProviderConfig } from '../../types/ai';
 import { OpenAICompatibleProvider } from './providers/openai-compatible';
 
 export function createAIProvider(config: AIProviderConfig): AIProvider {
+  const endpoint = config.proxyUrl;
+  if (endpoint) {
+    let parsed: URL;
+    try {
+      parsed = new URL(endpoint);
+    } catch {
+      throw new Error('AI provider endpoint must be a valid URL.');
+    }
+    if (parsed.protocol !== 'https:') {
+      throw new Error('AI provider endpoint must use HTTPS.');
+    }
+  }
+
   switch (config.providerId) {
     case 'openrouter':
       return new OpenAICompatibleProvider({

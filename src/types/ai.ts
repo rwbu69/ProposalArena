@@ -8,6 +8,7 @@ export interface AIMessage {
 export interface AIRequest {
   messages: AIMessage[];
   model: string;
+  language: 'en' | 'id';
   temperature?: number;
   maxTokens?: number;
   responseFormat?: 'text' | 'json';

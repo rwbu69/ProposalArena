@@ -30,3 +30,10 @@ export function canTransition(from: InterviewState, to: InterviewState): boolean
   };
   return allowed[from].includes(to);
 }
+
+export function transitionSession(session: InterviewSession, to: InterviewState): InterviewSession {
+  if (!canTransition(session.state, to)) {
+    throw new Error(`Invalid interview transition: ${session.state} -> ${to}`);
+  }
+  return { ...session, state: to };
+}

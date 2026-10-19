@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { X } from 'lucide-svelte';
+  import Icon from '../common/Icon.svelte';
   import { loadSettings, saveSettings, clearSettings } from '../../lib/storage/settings';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { uiLanguage as uiLanguageStore, theme as themeStore } from '../../lib/state/stores';
   import { applyTheme } from '../../lib/state/theme';
+  import { dbStore } from '../../lib/db/database';
+  import ConfirmModal from '../common/ConfirmModal.svelte';
   
   export let isOpen = false;
   
@@ -16,6 +18,7 @@
   let proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   let uiLanguage: 'en' | 'id' = 'en';
   let themeVal: 'system' | 'light' | 'dark' = 'system';
+  let confirmation: 'clear' | 'reset' | null = null;
 
   function initFromStorage() {
     const s = loadSettings();
@@ -82,6 +85,11 @@
   }
 
   function handleClear() {
+    confirmation = 'clear';
+  }
+
+  function clearStoredSettings() {
+    confirmation = null;
     clearSettings();
     providerId = 'gemini';
     model = 'gemini-3.5-flash-lite';
@@ -91,6 +99,28 @@
     themeStore.set('system');
     applyTheme('system');
     isOpen = false;
+  }
+
+  async function exportData() {
+    const data = await dbStore.exportData();
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `proposal-arena-export-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function resetData() {
+    confirmation = 'reset';
+  }
+
+  async function clearStoredData() {
+    confirmation = null;
+    await dbStore.clearAllData();
+    clearSettings();
+    window.location.reload();
   }
 
   function close() {
@@ -109,9 +139,32 @@
       <h2 class="font-serif text-lg font-normal tracking-tight text-ink dark:text-ink-dark">
         {$t('settings.title')}
       </h2>
-      <button on:click={close} class="p-1 text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors" title="Close">
-        <X size={18} strokeWidth={1.5} />
+      <button 
+        type="button"
+        on:click={close} 
+        class="w-10 h-10 flex items-center justify-center rounded-xs text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark" 
+        aria-label={$t('settings.closeAria')}
+        title={$t('settings.cancel')}
+      >
+        <Icon name="x" size={18} />
       </button>
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          on:click={exportData}
+          class="text-xs font-mono text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors px-2 py-1.5"
+        >
+          {$t('settings.exportData')}
+        </button>
+        <button
+          type="button"
+          on:click={resetData}
+          class="text-xs font-mono text-red-700 dark:text-red-400 hover:underline px-2 py-1.5"
+        >
+          {$t('settings.resetData')}
+        </button>
+      </div>
+
     </div>
     
     <!-- Modal Body -->
@@ -153,13 +206,19 @@
           <option value="openrouter">OpenRouter</option>
           <option value="openai">OpenAI</option>
         </select>
+        <p class="text-[11px] font-sans text-ink-faint dark:text-ink-faint-dark mt-1">
+          {$t('settings.providerHint')}
+        </p>
       </div>
       
       <div>
         <label for="settings-model-input" class="block text-xs font-mono uppercase tracking-wider text-ink-muted dark:text-ink-muted-dark mb-1.5">
           {$t('settings.model')}
         </label>
-        <textarea id="settings-model-input" bind:value={model} rows="2" class="w-full border border-hairline dark:border-hairline-dark rounded-none p-2.5 focus:border-accent text-sm bg-paper dark:bg-paper-dark text-ink dark:text-ink-dark outline-none font-mono text-xs resize-y"></textarea>
+        <textarea id="settings-model-input" bind:value={model} rows="2" class="w-full border border-hairline dark:border-hairline-dark rounded-none p-2.5 focus:border-accent bg-paper dark:bg-paper-dark text-ink dark:text-ink-dark outline-none font-mono text-xs resize-y"></textarea>
+        <p class="text-[11px] font-sans text-ink-faint dark:text-ink-faint-dark mt-1">
+          {$t('settings.modelHint')}
+        </p>
       </div>
       
       <div>
@@ -167,14 +226,20 @@
           {$t('settings.proxy')}
         </label>
         <input id="settings-proxy-input" type="text" bind:value={proxyUrl} class="w-full border border-hairline dark:border-hairline-dark rounded-none p-2.5 focus:border-accent text-xs font-mono bg-paper dark:bg-paper-dark text-ink dark:text-ink-dark outline-none" />
+        <p class="text-[11px] font-sans text-ink-faint dark:text-ink-faint-dark mt-1">
+          {$t('settings.proxyHint')}
+        </p>
       </div>
       
       <div>
         <label for="settings-apikey-input" class="block text-xs font-mono uppercase tracking-wider text-ink-muted dark:text-ink-muted-dark mb-1.5">
-          {$t('settings.apiKey')}
+          <span class="inline-flex items-center gap-1.5">
+            <Icon name="key" size={13} class="text-ink-faint shrink-0" />
+            <span>{$t('settings.apiKey')}</span>
+          </span>
         </label>
         <input id="settings-apikey-input" type="password" bind:value={apiKey} placeholder="Paste API Key here..." class="w-full border border-hairline dark:border-hairline-dark rounded-none p-2.5 focus:border-accent text-xs font-mono bg-paper dark:bg-paper-dark text-ink dark:text-ink-dark outline-none" />
-        <p class="text-[11px] font-mono text-ink-faint dark:text-ink-faint-dark mt-1">
+        <p class="text-[11px] font-sans text-ink-faint dark:text-ink-faint-dark mt-1">
           {$t('settings.apiHint')}
         </p>
       </div>
@@ -185,28 +250,51 @@
       <button
         type="button"
         on:click={handleClear}
-        class="text-xs font-mono text-ink-faint hover:text-red-700 transition-colors underline underline-offset-2"
+        class="inline-flex items-center gap-1.5 text-xs font-mono text-ink-faint hover:text-red-700 dark:hover:text-red-400 transition-colors underline underline-offset-2 px-2 py-1.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-red-600"
       >
-        {$t('settings.clear')}
+        <Icon name="trash" size={14} />
+        <span>{$t('settings.clear')}</span>
       </button>
 
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-3">
         <button
           type="button"
           on:click={close}
-          class="text-xs font-mono text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors"
+          class="text-xs font-mono text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors px-3 py-2 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
         >
           {$t('settings.cancel')}
         </button>
         <button
           type="button"
           on:click={save}
-          class="px-5 py-2 bg-accent hover:bg-accent-hover text-white dark:bg-accent-dark dark:hover:bg-accent-dark-hover dark:text-paper-dark text-xs font-mono tracking-wider transition-colors"
+          class="inline-flex items-center gap-2 px-5 py-2 bg-accent hover:bg-accent-hover text-white dark:bg-accent-dark dark:hover:bg-accent-dark-hover dark:text-paper-dark text-xs font-mono tracking-wider transition-colors rounded-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent-dark"
         >
-          {$t('settings.save')}
+          <Icon name="check" size={16} />
+          <span>{$t('settings.save')}</span>
         </button>
       </div>
     </div>
   </div>
 </div>
+{#if confirmation === 'clear'}
+  <ConfirmModal
+    title={$t('settings.confirmTitle')}
+    message={$t('settings.confirmClear')}
+    confirmLabel={$t('settings.confirmAction')}
+    cancelLabel={$t('settings.cancel')}
+    danger={true}
+    on:confirm={clearStoredSettings}
+    on:cancel={() => (confirmation = null)}
+  />
+{:else if confirmation === 'reset'}
+  <ConfirmModal
+    title={$t('settings.confirmTitle')}
+    message={$t('settings.confirmResetData')}
+    confirmLabel={$t('settings.deleteAction')}
+    cancelLabel={$t('settings.cancel')}
+    danger={true}
+    on:confirm={clearStoredData}
+    on:cancel={() => (confirmation = null)}
+  />
+{/if}
 {/if}

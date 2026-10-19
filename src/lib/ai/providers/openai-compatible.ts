@@ -27,10 +27,11 @@ export class OpenAICompatibleProvider implements AIProvider {
 
     let lastError: Error | null = null;
 
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     for (const currentModel of models) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+        timeoutId = setTimeout(() => controller.abort(), 60000);
 
         const response = await fetch(this.config.baseUrl, {
           method: 'POST',
@@ -49,8 +50,6 @@ export class OpenAICompatibleProvider implements AIProvider {
           }),
           signal: controller.signal
         });
-
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const detail = await response.text();
@@ -76,9 +75,14 @@ export class OpenAICompatibleProvider implements AIProvider {
             outputTokens: data.usage?.completion_tokens
           }
         };
-      } catch (e: any) {
-        console.warn(`[AIProvider] Request to ${currentModel} failed:`, e.message);
-        lastError = e;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown provider error';
+        lastError = error instanceof Error ? error : new Error(message);
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = undefined;
+        }
       }
     }
 

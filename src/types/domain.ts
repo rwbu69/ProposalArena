@@ -30,6 +30,8 @@ export interface InterviewSession {
   questionIndex: number;
   difficulty: number;
   interruptions: number;
+  timeLimitMinutes?: number;
+  startedAt?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -45,6 +47,7 @@ export interface InterviewMessage {
 export interface AnswerEvaluation {
   id: string;
   sessionId: string;
+  messageId?: string;
   correctness: number;
   relevance: number;
   depth: number;
