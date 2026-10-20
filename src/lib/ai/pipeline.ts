@@ -1,4 +1,4 @@
-import type { AIProvider } from '../../types/ai';
+import type { AIProvider, AIRequest } from '../../types/ai';
 import type { ProposalAnalysis, InterviewMessage, AnswerEvaluation, DefenseReport } from '../../types/domain';
 import examinerPromptTemplate from '../../prompts/examiner.md?raw';
 import { validateAnswerEvaluation, validateDefenseReport, validateProposalAnalysis } from './validation';
@@ -201,7 +201,7 @@ Return ONLY a valid JSON object matching this schema:
 Transcript:
 ${transcriptText}`;
 
-  const response = await provider.generate({
+  const request: AIRequest = {
     model: provider.defaultModel,
     language,
     messages: [
@@ -210,9 +210,30 @@ ${transcriptText}`;
     ],
     responseFormat: 'json',
     temperature: 0.2
-  });
+  };
 
-  const parsed = cleanAndParseJson<unknown>(response.text);
+  const response = await provider.generate(request);
+  let parsed: unknown;
+  try {
+    parsed = cleanAndParseJson<unknown>(response.text);
+  } catch {
+    const retryResponse = await provider.generate({
+      ...request,
+      messages: [
+        ...request.messages,
+        {
+          role: 'user',
+          content: `Your previous response was not valid JSON. Return only the JSON object matching the requested schema. Do not include a refusal, explanation, markdown fence, or commentary.`
+        }
+      ]
+    });
+    try {
+      parsed = cleanAndParseJson<unknown>(retryResponse.text);
+    } catch {
+      throw new Error('The AI model did not return a valid JSON report. Try another OpenRouter model.');
+    }
+  }
+
   return {
     ...validateDefenseReport(parsed),
     generatedAt: Date.now()
