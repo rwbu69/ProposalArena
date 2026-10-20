@@ -85,13 +85,13 @@ function getProvider() {
   const settings = loadSettings();
   const proxyUrl = import.meta.env.PUBLIC_AI_PROXY_URL || settings?.proxyUrl;
   const usesServerProxy = proxyUrl?.startsWith('/');
-  if (!settings || (!usesServerProxy && !settings.apiKey)) {
+  if (!usesServerProxy && !settings?.apiKey) {
     throw new Error("API Key belum dikonfigurasi. Harap isi di Pengaturan (ikon gerigi).");
   }
   return createAIProvider({
-    providerId: usesServerProxy ? 'openrouter' : (settings.providerId || 'gemini'),
-    apiKey: settings.apiKey,
-    model: usesServerProxy ? DEFAULT_SERVER_PROXY_MODEL : (settings.model || 'gemini-3.5-flash-lite'),
+    providerId: usesServerProxy ? 'openrouter' : (settings?.providerId || 'gemini'),
+    apiKey: settings?.apiKey,
+    model: usesServerProxy ? DEFAULT_SERVER_PROXY_MODEL : (settings?.model || 'gemini-3.5-flash-lite'),
     proxyUrl: proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
   });
 }
