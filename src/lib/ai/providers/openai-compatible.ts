@@ -4,7 +4,7 @@ interface OpenAIConfig {
   baseUrl: string;
   id: string;
   displayName: string;
-  apiKey: string;
+  apiKey?: string;
   model: string;
 }
 
@@ -22,26 +22,25 @@ export class OpenAICompatibleProvider implements AIProvider {
   async generate(request: AIRequest): Promise<AIResponse> {
     const models = request.model.split(',').map(m => m.trim()).filter(Boolean);
     if (models.length === 0) {
-      throw new Error("No models specified.");
+      throw new Error('No models specified.');
     }
 
     let lastError: Error | null = null;
-
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     for (const currentModel of models) {
       try {
         const controller = new AbortController();
-        timeoutId = setTimeout(() => controller.abort(), 60000);
-
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
         const response = await fetch(this.config.baseUrl, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${this.config.apiKey}`,
+            ...(this.config.apiKey ? { Authorization: `Bearer ${this.config.apiKey}` } : {}),
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
+            provider: this.id,
             model: currentModel,
             messages: request.messages,
+            language: request.language,
             temperature: request.temperature,
             max_tokens: request.maxTokens,
             ...(request.responseFormat === 'json'
@@ -50,6 +49,7 @@ export class OpenAICompatibleProvider implements AIProvider {
           }),
           signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const detail = await response.text();
@@ -61,9 +61,8 @@ export class OpenAICompatibleProvider implements AIProvider {
           choices?: Array<{ message?: { content?: string } }>;
           usage?: { prompt_tokens?: number; completion_tokens?: number };
         };
-
         const text = data.choices?.[0]?.message?.content;
-        if (typeof text !== 'string') {
+        if (typeof text !== 'string' || text.trim().length === 0) {
           throw new Error(`${this.displayName} returned no assistant text.`);
         }
 
@@ -76,13 +75,7 @@ export class OpenAICompatibleProvider implements AIProvider {
           }
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown provider error';
-        lastError = error instanceof Error ? error : new Error(message);
-      } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = undefined;
-        }
+        lastError = error instanceof Error ? error : new Error('Unknown provider error');
       }
     }
 

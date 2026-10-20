@@ -61,7 +61,17 @@ Checks:
 bun run check
 bun run build
 ```
+## Vercel deployment with a server-side API key
+
+The repository includes an optional Vercel Function at `api/ai.ts`. To use it:
+
+1. Set `PUBLIC_AI_PROXY_URL` to `/api/ai`.
+2. Set `OPENROUTER_API_KEY` to the OpenRouter key as a Vercel Environment Variable. Do not prefix this secret with `PUBLIC_`.
+3. Redeploy the project.
+
+The browser sends AI requests to `/api/ai`; the function adds the secret key before calling OpenRouter. Set `OPENROUTER_MODEL` optionally to override the default model (`openai/gpt-4o-mini`). The proxy currently supports OpenRouter only. Add authentication and rate limiting before exposing it to an untrusted public audience.
+
 ## Important privacy model
-The user provides their own provider API key. The app must never contain a shared project secret. Thesis text may be transmitted to the selected provider when an AI feature is used; the UI should explain this before sending data.
+The default mode uses a user-provided provider API key stored locally in the browser. The optional Vercel proxy keeps the project key server-side, but thesis text is still transmitted to OpenRouter when an AI feature is used. The UI should explain this before sending data.
 ## Agent guidance
 Read `AGENTS.md` first. Then read the relevant files in `docs/` and `.agents/` before implementing substantial work.

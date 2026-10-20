@@ -22,3 +22,11 @@ Important risks:
 - Keep originals immutable.
 - Provide clear deletion controls.
 - Avoid collecting analytics or telemetry unless explicitly added and documented.
+
+## Vercel proxy
+
+The optional `api/ai.ts` function reads `OPENROUTER_API_KEY` server-side. Never
+expose that value through an Astro `PUBLIC_` variable or commit it to source
+control. The proxy should be protected with authentication and rate limiting
+before public deployment; otherwise visitors can use the deployment to incur
+provider charges.

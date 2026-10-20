@@ -8,6 +8,7 @@ export interface AppSettings {
 }
 
 const KEY = 'thesis-defense-simulator:settings';
+export const DEFAULT_SERVER_PROXY_MODEL = 'openai/gpt-4o-mini';
 
 export function loadSettings(): AppSettings | null {
   if (typeof localStorage === 'undefined') return null;

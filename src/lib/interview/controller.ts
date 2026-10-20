@@ -4,7 +4,7 @@ import type { InterviewSession, InterviewMessage, Proposal, ProposalAnalysis, De
 import { dbStore } from '../db/database';
 import { generateQuestion, evaluateAnswer, generateReport } from '../ai/pipeline';
 import { createAIProvider } from '../ai/provider';
-import { loadSettings } from '../storage/settings';
+import { DEFAULT_SERVER_PROXY_MODEL, loadSettings } from '../storage/settings';
 import { voiceEnabled, handsFreeEnabled } from '../state/stores';
 import { speak } from '../voice/speech';
 import { transitionSession } from './engine';
@@ -83,12 +83,16 @@ export async function initSession(proposalId: string, timeLimitMinutes?: number)
 
 function getProvider() {
   const settings = loadSettings();
-  if (!settings || !settings.apiKey) throw new Error("API Key belum dikonfigurasi. Harap isi di Pengaturan (ikon gerigi).");
+  const proxyUrl = import.meta.env.PUBLIC_AI_PROXY_URL || settings?.proxyUrl;
+  const usesServerProxy = proxyUrl?.startsWith('/');
+  if (!settings || (!usesServerProxy && !settings.apiKey)) {
+    throw new Error("API Key belum dikonfigurasi. Harap isi di Pengaturan (ikon gerigi).");
+  }
   return createAIProvider({
-    providerId: settings.providerId || 'gemini',
+    providerId: usesServerProxy ? 'openrouter' : (settings.providerId || 'gemini'),
     apiKey: settings.apiKey,
-    model: settings.model || 'gemini-3.5-flash-lite',
-    proxyUrl: settings.proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+    model: usesServerProxy ? DEFAULT_SERVER_PROXY_MODEL : (settings.model || 'gemini-3.5-flash-lite'),
+    proxyUrl: proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
   });
 }
 

@@ -32,7 +32,7 @@ export interface AIProvider {
 
 export interface AIProviderConfig {
   providerId: string;
-  apiKey: string;
+  apiKey?: string;
   model: string;
   proxyUrl?: string;
 }

@@ -13,7 +13,7 @@
   } from "../../lib/interview/controller";
   import { analyzeProposal } from "../../lib/ai/pipeline";
   import { createAIProvider } from "../../lib/ai/provider";
-  import { loadSettings } from "../../lib/storage/settings";
+  import { DEFAULT_SERVER_PROXY_MODEL, loadSettings } from "../../lib/storage/settings";
   import { v4 as uuidv4 } from "uuid";
   import { t } from "svelte-i18n";
   import { showSettings } from "../../lib/state/stores";
@@ -117,18 +117,18 @@
       await dbStore.saveProposal(proposal);
 
       const settings = loadSettings();
-      if (!settings?.apiKey || settings.apiKey.trim().length < 5) {
+      const proxyUrl = import.meta.env.PUBLIC_AI_PROXY_URL || settings?.proxyUrl;
+      const usesServerProxy = proxyUrl?.startsWith('/');
+      if (!usesServerProxy && (!settings?.apiKey || settings.apiKey.trim().length < 5)) {
         $showSettings = true;
         throw new Error($t("upload.errorNoApiKey"));
       }
 
       const provider = createAIProvider({
-        providerId: settings.providerId || "gemini",
-        apiKey: settings.apiKey,
-        model: settings.model || "gemini-3.5-flash-lite",
-        proxyUrl:
-          settings.proxyUrl ||
-          "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        providerId: usesServerProxy ? "openrouter" : (settings.providerId || "gemini"),
+        apiKey: settings?.apiKey,
+        model: usesServerProxy ? DEFAULT_SERVER_PROXY_MODEL : (settings.model || "gemini-3.5-flash-lite"),
+        proxyUrl: proxyUrl || "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       });
 
       processingStage = "analyzing";

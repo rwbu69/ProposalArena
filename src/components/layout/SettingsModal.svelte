@@ -12,28 +12,29 @@
   
   const OPENROUTER_DEFAULT = 'nvidia/nemotron-3-ultra-550b-a55b:free, nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free, nvidia/nemotron-3.5-lightning:free, nvidia/nemotron-3-super-120b-a12b:free, thinkingmachines/inkling:free, poolside/laguna-s-2.1:free';
 
-  let providerId = 'gemini';
-  let model = 'gemini-3.5-flash-lite';
+  let providerId = import.meta.env.PUBLIC_AI_PROXY_URL ? 'openrouter' : 'gemini';
+  let model = import.meta.env.PUBLIC_AI_PROXY_URL ? 'openai/gpt-4o-mini' : 'gemini-3.5-flash-lite';
   let apiKey = '';
   let proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   let uiLanguage: 'en' | 'id' = 'en';
   let themeVal: 'system' | 'light' | 'dark' = 'system';
   let confirmation: 'clear' | 'reset' | null = null;
+  const configuredProxyUrl = import.meta.env.PUBLIC_AI_PROXY_URL || '';
 
   function initFromStorage() {
     const s = loadSettings();
     if (s) {
-      providerId = s.providerId ?? 'gemini';
-      model = s.model ?? 'gemini-3.5-flash-lite';
+      providerId = configuredProxyUrl ? 'openrouter' : (s.providerId ?? 'gemini');
+      model = configuredProxyUrl ? 'openai/gpt-4o-mini' : (s.model ?? 'gemini-3.5-flash-lite');
       apiKey = s.apiKey ?? '';
-      proxyUrl = s.proxyUrl ?? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      proxyUrl = configuredProxyUrl || s.proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
       uiLanguage = uiLanguageStore.get() || s.uiLanguage || 'en';
       themeVal = themeStore.get() || s.theme || 'system';
     } else {
-      providerId = 'gemini';
-      model = 'gemini-3.5-flash-lite';
+      providerId = configuredProxyUrl ? 'openrouter' : 'gemini';
+      model = configuredProxyUrl ? 'openai/gpt-4o-mini' : 'gemini-3.5-flash-lite';
       apiKey = '';
-      proxyUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      proxyUrl = configuredProxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
       uiLanguage = uiLanguageStore.get() || 'en';
       themeVal = themeStore.get() || 'system';
     }

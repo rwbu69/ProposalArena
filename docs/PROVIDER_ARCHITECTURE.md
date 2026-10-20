@@ -38,6 +38,14 @@ export interface AIProvider {
 
 `createProvider(config)` chooses the adapter based on the user's selected provider.
 
+## Optional Vercel proxy
+
+For deployments that use a project-owned OpenRouter key, set the public proxy URL to
+`/api/ai` and store the actual key in the server-only `OPENROUTER_API_KEY`
+environment variable. The browser provider keeps the normalized request contract
+and the Vercel Function forwards only validated requests to OpenRouter. Direct
+user-key mode remains available when the proxy URL is not configured.
+
 ## Provider-specific logic
 
 Only the adapter should know:
