@@ -1,93 +1,124 @@
-# AI-based judgements thesis defense simulator thingy
+# ProposalArena — Simulator Sidang Proposal Skripsi Berbasis AI
 
-A local-first, client-side thesis proposal defense simulator designed for static hosting.
+**ProposalArena** adalah aplikasi simulasi sidang proposal skripsi interaktif yang dirancang dengan arsitektur *local-first*. Mahasiswa dapat mengunggah naskah proposal PDF, berlatih menghadapi pertanyaan kritis dosen penguji AI baik lewat **teks maupun suara (*live voice / hands-free*)**, serta memperoleh laporan evaluasi terstruktur yang siap dicetak ke PDF.
 
-## Architecture
+---
+
+## Alur Simulasi
 
 ```text
-Astro + TypeScript
-        |
-        +--> Svelte interactive components (with Tailwind CSS)
-        |
-        +--> Interview/domain logic
-        |      +--> i18n (Multi-language Support)
-        |      +--> Session Integrity Monitoring
-        |      +--> Voice (Speech-to-Text & Text-to-Speech)
-        |
-        +--> Browser storage
-        |      +--> localStorage (small settings)
-        |      +--> IndexedDB (proposals, sessions, reports)
-        |
-        +--> AI provider abstraction
-               +--> OpenRouter adapter (initial)
-               +--> future providers
+Upload PDF (Maks. 10 MB)
+   │
+   ▼
+Deteksi & Konfirmasi Bahasa (ID / EN)
+   │
+   ▼
+Analisis Proposal Otomatis (Struktur, Metodologi, Celah Riset)
+   │
+   ▼
+Briefing & Pemilihan Timer (Tanpa Timer / 15 / 20 / 30 Menit)
+   │
+   ▼
+Sesi Sidang Interaktif (Maks. 10 Pertanyaan — Teks / Suara / Hands-Free)
+   │
+   ▼
+Laporan Evaluasi & Skor Rubrik (/report — Salin Catatan & Cetak PDF)
 ```
 
-There is intentionally no application server or database server in the MVP.
+---
 
-## Primary features & goals
+## Fitur Utama
 
-1. Upload/read a thesis proposal in the browser.
-2. Analyze it through a user-selected AI provider.
-3. Run an adaptive text-based or voice-enabled defense simulation.
-4. Monitor session integrity (e.g., tab switching/focus loss).
-5. Support multiple languages for UI and interaction.
-6. Evaluate answers and generate a local report.
-7. Keep user data local by default using IndexedDB.
-8. Keep the AI provider replaceable.
-9. Make the entire application statically deployable.
+1. **Ekstraksi & Grounding Dokumen Lokal (`pdfjs-dist` + `MiniSearch`)**
+   - Naskah PDF dibaca langsung di browser dan diindeks secara lokal menggunakan `MiniSearch` untuk melakukan *Client-Side RAG*, sehingga pertanyaan penguji berakar pada isi proposal yang diunggah.
+2. **Penguji AI Adaptif & Evaluasi 5 Rubrik**
+   - Pipeline AI (`src/lib/ai/pipeline.ts`) membagi proses menjadi tahap *Analysis*, *Examine*, *Evaluate*, dan *Report*.
+   - Setiap jawaban dinilai pada 5 kriteria (*Correctness*, *Relevance*, *Depth*, *Justification*, dan *Clarity*) skala 1–5 yang menyesuaikan tingkat kesulitan pertanyaan berikutnya secara dinamis.
+3. **Mode Suara & *Hands-Free* Bahasa Indonesia**
+   - **Text-to-Speech (TTS)**: Menggunakan Google Gemini TTS (`gemini-2.5-flash-preview-tts` dengan fallback `gemini-3.8-flash-lite-tts` dan Web Speech API) serta sinkronisasi agar teks pertanyaan dan audio penguji muncul bersamaan.
+   - **Speech-to-Text (STT)**: Menggunakan Groq Whisper (`whisper-large-v3`) melalui `/api/stt` baik untuk dikte manual maupun *Hands-Free Mode* (dilengkapi deteksi jeda suara otomatis via `AudioContext`).
+4. **Pemantauan Integritas & Timer Sidang**
+   - Mendeteksi perpindahan tab atau hilangnya fokus jendela (`IntegrityMonitor.svelte`) dan mencatatnya di laporan akhir.
+   - Timer sidang otomatis mengakhiri sesi dan menyusun laporan ketika waktu habis atau setelah pertanyaan ke-10 selesai.
+5. **Laporan Evaluasi & Ekspor PDF (`/report`)**
+   - Menampilkan ringkasan skor (0–100 dan 1–5), refleksi penguasaan materi, kekuatan, kelemahan, *action plan*, *drill questions*, tombol salin, serta dukungan cetak PDF (`Print / Save as PDF`).
+6. **Penyimpanan Lokal-Pertama (*Local-First*)**
+   - Seluruh proposal, transkrip, evaluasi, dan laporan disimpan di **IndexedDB** browser pengguna, dengan fitur **Export Data (JSON)** dan **Reset Data Lokal** di menu Pengaturan.
+7. **Dwibahasa Independen (UI & Interaksi)**
+   - Bahasa antarmuka (`ID` / `EN`) dapat diganti kapan saja di header tanpa mengubah bahasa sesi wawancara yang sudah dikonfirmasi dari proposal.
 
-## AI Simulation Techniques
+---
 
-To ensure the LLM behaves as a realistic and rigorous examiner, the following techniques are integrated into the AI pipeline (`src/lib/ai/pipeline.ts` and `src/prompts/`):
+## Arsitektur & Tech Stack
 
-1. **Multi-stage Pipeline**: The interaction is broken down into specific AI tasks rather than relying on one giant prompt.
-   - *Analysis*: The proposal is first analyzed into structured JSON (objectives, methodology, limitations) at a low temperature (`0.1`) to establish facts.
-   - *Examine*: Question generation runs at a higher temperature (`0.7`) for dynamic adaptation.
-   - *Evaluate*: Each student answer is individually graded (1-5 on depth, relevance, clarity) to build the final report.
-   - *Report*: A final summary call extracts strengths, weaknesses, and recommendations based on the whole transcript.
-2. **Context Grounding (RAG)**: Uses a client-side search index (`minisearch`) to retrieve relevant chunks from the thesis text based on the conversation history, anchoring the examiner's questions in the actual document to prevent hallucination.
-3. **Rolling Transcript Memory**: The LLM is fed a sliding window of the most recent transcript exchanges (e.g., last 6 messages) to maintain context and ask adaptive follow-up questions without exceeding context limits.
-4. **Strict Persona & Guardrails**: The examiner prompt strictly forbids pleasantries, compound questions, or breaking character. It includes explicit guardrails to refuse "tutoring" requests or summarizing the student's work for them.
-5. **Adaptive Difficulty**: A difficulty scalar (1-5) is explicitly injected into the prompt, guiding the LLM from basic clarification questions up to challenging the feasibility and trade-offs of the chosen methodology.
+```text
+Astro (Static) + Svelte + TypeScript + Tailwind CSS
+   ├── Storage Lokal
+   │     ├── IndexedDB (proposals, analyses, sessions, messages, evaluations, reports, judgments)
+   │     └── localStorage (bahasa UI, tema, preferensi suara, settings)
+   ├── Domain & AI Pipeline
+   │     ├── PDF Extractor & Language Detector (src/lib/file/extractor.ts)
+   │     ├── Client-Side RAG Indexer (src/lib/search/indexer.ts)
+   │     ├── Interview State Machine & Controller (src/lib/interview/)
+   │     └── Voice Engine: TTS & Groq Whisper STT (src/lib/voice/)
+   └── Serverless Proxy (Vercel Functions / Vite Dev Middleware)
+         ├── /api/ai  ──► Google Gemini (gemini-3.5-flash-lite)
+         ├── /api/tts ──► Google Gemini TTS (gemini-2.5-flash-preview-tts)
+         └── /api/stt ──► Groq Whisper (whisper-large-v3)
+```
 
-## Non-goals for the MVP
+---
 
-- VPS/backend deployment
-- PostgreSQL/Redis/S3
-- centralized authentication
-- project-owned AI API credentials
-- server-side document storage
-- server-side AI proxy
+## Menjalankan Secara Lokal
 
-## Development
+### 1. Prasyarat
+- **Node.js** v20+ (direkomendasikan v22+)
+- **Google Gemini API Key** dari [Google AI Studio](https://aistudio.google.com/)
+- **Groq API Key** dari [Groq Console](https://console.groq.com/) *(untuk fitur STT / dikte & hands-free suara)*
 
+### 2. Instalasi & Konfigurasi
 ```bash
-bun install
-bun run dev
+npm install
+cp .env.example .env
 ```
 
-Checks:
+Isi file `.env` Anda:
+```env
+PUBLIC_AI_PROXY_URL=/api/ai
+GEMINI_API_KEY=isi_gemini_api_key_anda
+GROQ_API_KEY=isi_groq_api_key_anda
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
 
+### 3. Perintah Pengembangan & Verifikasi
 ```bash
-bun run check
-bun run build
+# Menjalankan server pengembangan lokal (http://localhost:4321)
+npm run dev
+
+# Pemeriksaan tipe TypeScript & komponen Astro/Svelte
+npm run check
+
+# Build produksi static ke folder dist/
+npm run build
 ```
 
-## Vercel deployment with a server-side API key
+---
 
-The repository includes an optional Vercel Function at `api/ai.ts`. To use it:
+## Deployment ke Vercel
 
-1. Set `PUBLIC_AI_PROXY_URL` to `/api/ai`.
-2. Set `OPENROUTER_API_KEY` to the OpenRouter key as a Vercel Environment Variable. Do not prefix this secret with `PUBLIC_`.
-3. Redeploy the project.
+Proyek ini sudah dilengkapi konfigurasi [vercel.json](file:///d:/proposalarena/vercel.json) dan *serverless functions* pada folder `api/` (`api/ai.ts`, `api/tts.ts`, `api/stt.ts`).
 
-The browser sends AI requests to `/api/ai`; the function adds the secret key before calling OpenRouter. Set `OPENROUTER_MODEL` optionally to override the default model (`openai/gpt-4o-mini`). The proxy currently supports OpenRouter only. Add authentication and rate limiting before exposing it to an untrusted public audience.
+1. Hubungkan repositori ke proyek Vercel baru.
+2. Pada **Project Settings → Environment Variables**, tambahkan:
+   - `PUBLIC_AI_PROXY_URL` = `/api/ai`
+   - `GEMINI_API_KEY` = *(API key Gemini Anda — **jangan** gunakan prefix `PUBLIC_`)*
+   - `GROQ_API_KEY` = *(API key Groq Anda — **jangan** gunakan prefix `PUBLIC_`)*
+   - `GEMINI_MODEL` = `gemini-3.5-flash-lite` *(opsional)*
+3. Lakukan **Deploy / Redeploy** agar `PUBLIC_AI_PROXY_URL` ikut terbaca saat proses `astro build`.
 
-## Important privacy model
+---
 
-The default mode uses a user-provided provider API key stored locally in the browser. The optional Vercel proxy keeps the project key server-side, but thesis text is still transmitted to OpenRouter when an AI feature is used. The UI should explain this before sending data.
+## Privasi & Keamanan
 
-## Agent guidance
-
-Read `AGENTS.md` first. Then read the relevant files in `docs/` and `.agents/` before implementing substantial work.
+- **API Key Aman di Server**: Saat menggunakan mode proxy (`/api/ai`, `/api/tts`, `/api/stt`), seluruh kredensial disimpan di environment variable server dan tidak pernah disertakan ke dalam bundle JavaScript client.
+- **Data Tetap di Browser**: Dokumen proposal, transkrip, dan laporan tersimpan lokal di IndexedDB browser Anda dan hanya dikirim ke penyedia AI terkait saat fitur analisis/sidang/suara dijalankan.
