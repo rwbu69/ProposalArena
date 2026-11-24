@@ -1,6 +1,9 @@
-**AI-based judgements thesis defense simulator thingy.**
+# AI-based judgements thesis defense simulator thingy
+
 A local-first, client-side thesis proposal defense simulator designed for static hosting.
+
 ## Architecture
+
 ```text
 Astro + TypeScript
         |
@@ -19,8 +22,11 @@ Astro + TypeScript
                +--> OpenRouter adapter (initial)
                +--> future providers
 ```
+
 There is intentionally no application server or database server in the MVP.
+
 ## Primary features & goals
+
 1. Upload/read a thesis proposal in the browser.
 2. Analyze it through a user-selected AI provider.
 3. Run an adaptive text-based or voice-enabled defense simulation.
@@ -30,6 +36,7 @@ There is intentionally no application server or database server in the MVP.
 7. Keep user data local by default using IndexedDB.
 8. Keep the AI provider replaceable.
 9. Make the entire application statically deployable.
+
 ## AI Simulation Techniques
 
 To ensure the LLM behaves as a realistic and rigorous examiner, the following techniques are integrated into the AI pipeline (`src/lib/ai/pipeline.ts` and `src/prompts/`):
@@ -45,22 +52,28 @@ To ensure the LLM behaves as a realistic and rigorous examiner, the following te
 5. **Adaptive Difficulty**: A difficulty scalar (1-5) is explicitly injected into the prompt, guiding the LLM from basic clarification questions up to challenging the feasibility and trade-offs of the chosen methodology.
 
 ## Non-goals for the MVP
+
 - VPS/backend deployment
 - PostgreSQL/Redis/S3
 - centralized authentication
 - project-owned AI API credentials
 - server-side document storage
 - server-side AI proxy
+
 ## Development
+
 ```bash
 bun install
 bun run dev
 ```
+
 Checks:
+
 ```bash
 bun run check
 bun run build
 ```
+
 ## Vercel deployment with a server-side API key
 
 The repository includes an optional Vercel Function at `api/ai.ts`. To use it:
@@ -72,6 +85,9 @@ The repository includes an optional Vercel Function at `api/ai.ts`. To use it:
 The browser sends AI requests to `/api/ai`; the function adds the secret key before calling OpenRouter. Set `OPENROUTER_MODEL` optionally to override the default model (`openai/gpt-4o-mini`). The proxy currently supports OpenRouter only. Add authentication and rate limiting before exposing it to an untrusted public audience.
 
 ## Important privacy model
+
 The default mode uses a user-provided provider API key stored locally in the browser. The optional Vercel proxy keeps the project key server-side, but thesis text is still transmitted to OpenRouter when an AI feature is used. The UI should explain this before sending data.
+
 ## Agent guidance
+
 Read `AGENTS.md` first. Then read the relevant files in `docs/` and `.agents/` before implementing substantial work.

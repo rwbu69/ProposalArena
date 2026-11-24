@@ -70,7 +70,8 @@
     {/if}
     {#each sessions as s}
       <button 
-        class="w-full text-left p-4 border-b border-hairline dark:border-hairline-dark hover:bg-paper-surface dark:hover:bg-paper-surface-dark transition-colors {selectedSession?.id === s.id ? 'bg-paper-surface dark:bg-paper-surface-dark border-l-2 border-l-accent dark:border-l-accent-dark' : ''}"
+        type="button"
+        class="w-full text-left p-4 border-b border-hairline dark:border-hairline-dark hover:bg-paper-surface dark:hover:bg-paper-surface-dark transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark {selectedSession?.id === s.id ? 'bg-paper-surface dark:bg-paper-surface-dark border-l-2 border-l-accent dark:border-l-accent-dark' : ''}"
         on:click={() => selectSession(s)}>
         <p class="font-serif text-base truncate">{s.proposalTitle}</p>
         <p class="text-[10px] font-mono text-ink-faint dark:text-ink-faint-dark mt-1">ID: {s.id.slice(0,8)}... · State: {s.state}</p>

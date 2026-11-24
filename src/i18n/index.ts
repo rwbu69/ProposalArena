@@ -4,20 +4,20 @@ import { uiLanguage } from '../lib/state/stores';
 register('en', () => import('./en.json'));
 register('id', () => import('./id.json'));
 
-// Detect browser language (defaulting to en)
+// Detect browser language (defaulting to id)
 function getBrowserLang() {
-  if (typeof navigator === 'undefined') return 'en';
-  const lang = navigator.language.split('-')[0] || 'en';
-  return ['en', 'id'].includes(lang) ? lang : 'en';
+  if (typeof navigator === 'undefined') return 'id';
+  const lang = navigator.language.split('-')[0] || 'id';
+  return ['en', 'id'].includes(lang) ? lang : 'id';
 }
 
 const savedLang = typeof localStorage !== 'undefined'
   ? localStorage.getItem('thesis-defense-simulator:ui-language') || getBrowserLang()
-  : 'en';
+  : 'id';
 
 init({
-  fallbackLocale: 'en',
-  initialLocale: ['en', 'id'].includes(savedLang) ? savedLang : 'en',
+  fallbackLocale: 'id',
+  initialLocale: ['en', 'id'].includes(savedLang) ? savedLang : 'id',
 });
 
 // Sync i18n locale with the global store

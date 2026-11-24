@@ -6,7 +6,7 @@ import { generateQuestion, evaluateAnswer, generateReport } from '../ai/pipeline
 import { createAIProvider } from '../ai/provider';
 import { DEFAULT_SERVER_PROXY_MODEL, loadSettings } from '../storage/settings';
 import { voiceEnabled, handsFreeEnabled } from '../state/stores';
-import { speak } from '../voice/speech';
+import { speak, stopSpeaking, prefetchSpeech } from '../voice/speech';
 import { transitionSession } from './engine';
 
 export const currentSession = atom<InterviewSession | null>(null);
@@ -15,9 +15,11 @@ export const currentProposal = atom<Proposal | null>(null);
 export const currentAnalysis = atom<ProposalAnalysis | null>(null);
 export const currentReport = atom<DefenseReport | null>(null);
 export const isProcessing = atom<boolean>(false);
+export const processingStage = atom<'question' | 'voice' | null>(null);
 export const MAX_QUESTIONS = 10;
 export const selectedTimeLimit = atom<number>(0); // 0 = no timer, 15, 20, 30 minutes
 export const endingStatusMessage = atom<string | null>(null);
+export const sessionError = atom<string | null>(null);
 
 export function setTimeLimit(minutes: number) {
   selectedTimeLimit.set(minutes);
@@ -29,13 +31,24 @@ export function setTimeLimit(minutes: number) {
   }
 }
 
-export async function loadProposal(proposalId: string) {
-  const proposal = await dbStore.getProposal(proposalId);
-  if (proposal) {
-    currentProposal.set(proposal);
-    const { globalIndexer } = await import('../search/indexer');
-    globalIndexer.indexProposal(proposal.id, proposal.text);
+export function formatFriendlyErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err || '');
+  if (!raw) return 'Terjadi kendala pada sistem. Silakan coba lagi.';
+
+  const lower = raw.toLowerCase();
+  if (lower.includes('dynamically imported module') || lower.includes('failed to fetch dynamically')) {
+    return 'Modul sistem peramban sempat memuat ulang di dev mode. Silakan klik tombol "Mulai Sidang" sekali lagi.';
   }
+  if (lower.includes('gemini_api_key') || lower.includes('api key belum')) {
+    return 'Gemini API Key belum terkonfigurasi. Silakan buka Pengaturan (ikon gerigi) untuk memasukkan API Key.';
+  }
+  if (lower.includes('503') || lower.includes('overloaded') || lower.includes('429')) {
+    return 'Layanan Google Gemini sedang menerima banyak request. Silakan klik Mulai Sidang lagi dalam beberapa detik.';
+  }
+  if (lower.includes('failed to fetch') || lower.includes('networkerror') || lower.includes('unable to reach')) {
+    return 'Koneksi ke server AI terputus. Pastikan koneksi internet stabil dan coba kembali.';
+  }
+  return raw;
 }
 
 export async function restoreActiveSession() {
@@ -51,9 +64,30 @@ export async function restoreActiveSession() {
     currentProposal.set(proposal);
     currentAnalysis.set(analysis);
     currentMessages.set(await dbStore.getMessages(session.id));
-    const { globalIndexer } = await import('../search/indexer');
-    globalIndexer.indexProposal(proposal.id, proposal.text);
+    try {
+      const { globalIndexer } = await import('../search/indexer');
+      globalIndexer.indexProposal(proposal.id, proposal.text);
+    } catch (e) {
+      console.warn("Failed to index proposal on restore:", e);
+    }
     return true;
+}
+
+export async function exitActiveSession() {
+  stopSpeaking();
+  handsFreeEnabled.set(false);
+  const session = currentSession.get();
+  if (session) {
+    session.state = 'COMPLETED';
+    session.updatedAt = Date.now();
+    await dbStore.saveSession(session);
+  }
+  currentSession.set(null);
+  currentMessages.set([]);
+  currentProposal.set(null);
+  currentAnalysis.set(null);
+  endingStatusMessage.set(null);
+  sessionError.set(null);
 }
 
 export async function initSession(proposalId: string, timeLimitMinutes?: number) {
@@ -61,6 +95,11 @@ export async function initSession(proposalId: string, timeLimitMinutes?: number)
   if (!proposal) throw new Error("Proposal not found");
   
   currentProposal.set(proposal);
+  
+  const analysis = await dbStore.getAnalysis(proposalId);
+  if (analysis) {
+    currentAnalysis.set(analysis);
+  }
   
   const limit = timeLimitMinutes !== undefined ? timeLimitMinutes : selectedTimeLimit.get();
   const session: InterviewSession = {
@@ -79,6 +118,7 @@ export async function initSession(proposalId: string, timeLimitMinutes?: number)
   currentSession.set(session);
   currentMessages.set([]);
   endingStatusMessage.set(null);
+  sessionError.set(null);
 }
 
 function getProvider() {
@@ -89,7 +129,7 @@ function getProvider() {
     throw new Error("API Key belum dikonfigurasi. Harap isi di Pengaturan (ikon gerigi).");
   }
   return createAIProvider({
-    providerId: usesServerProxy ? 'openrouter' : (settings?.providerId || 'gemini'),
+    providerId: 'gemini',
     apiKey: settings?.apiKey,
     model: usesServerProxy ? DEFAULT_SERVER_PROXY_MODEL : (settings?.model || 'gemini-3.5-flash-lite'),
     proxyUrl: proxyUrl || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
@@ -98,19 +138,37 @@ function getProvider() {
 
 export async function askNextQuestion() {
   const session = currentSession.get();
-  const analysis = currentAnalysis.get();
-  const proposal = currentProposal.get();
-  if (!session || !analysis || !proposal) return;
-  
-  // Record wall-clock start time on the very first question
-  if (!session.startedAt) {
-    session.startedAt = Date.now();
-    await dbStore.saveSession(session);
-    currentSession.set(session);
+  if (!session) return;
+
+  let analysis: ProposalAnalysis | undefined | null = currentAnalysis.get();
+  let proposal: Proposal | undefined | null = currentProposal.get();
+
+  if (!proposal) {
+    proposal = await dbStore.getProposal(session.proposalId);
+    if (proposal) currentProposal.set(proposal);
+  }
+  if (!analysis) {
+    analysis = await dbStore.getAnalysis(session.proposalId);
+    if (analysis) currentAnalysis.set(analysis);
   }
 
+  if (!proposal || !analysis) {
+    sessionError.set("Berkas proposal atau analisis tidak ditemukan di penyimpanan browser. Coba unggah ulang berkas proposal.");
+    return;
+  }
+  
+  sessionError.set(null);
   isProcessing.set(true);
+  processingStage.set('question');
+
   try {
+    // Record wall-clock start time on the very first question
+    if (!session.startedAt) {
+      session.startedAt = Date.now();
+      await dbStore.saveSession(session);
+      currentSession.set(session);
+    }
+
     const provider = getProvider();
     const messages = await dbStore.getMessages(session.id);
     let question = await generateQuestion(provider, analysis, messages, proposal.language, session.difficulty);
@@ -123,6 +181,11 @@ export async function askNextQuestion() {
       question = proposal.language === 'id'
         ? 'Mari kita perdalam aspek metodologi yang belum Anda jelaskan dalam proposal.'
         : 'Let us examine a methodological aspect that you have not yet explained in the proposal.';
+    }
+
+    if (voiceEnabled.get() || handsFreeEnabled.get()) {
+      processingStage.set('voice');
+      await prefetchSpeech(question, proposal.language);
     }
     
     await addMessage('assistant', question);
@@ -137,7 +200,11 @@ export async function askNextQuestion() {
     session.questionIndex++;
     await dbStore.saveSession(session);
     currentSession.set(session);
+  } catch (err: any) {
+    console.error("Error asking question:", err);
+    sessionError.set(formatFriendlyErrorMessage(err));
   } finally {
+    processingStage.set(null);
     isProcessing.set(false);
   }
 }
@@ -147,6 +214,7 @@ export async function submitAnswer(answer: string) {
   const proposal = currentProposal.get();
   if (!session || !proposal) return;
   
+  sessionError.set(null);
   isProcessing.set(true);
   try {
     await addMessage('user', answer);
@@ -158,42 +226,46 @@ export async function submitAnswer(answer: string) {
     const lastQuestion = [...messages].reverse().find(m => m.role === 'assistant');
     
     if (lastQuestion) {
-      const provider = getProvider();
-      const evalResult = await evaluateAnswer(provider, lastQuestion.content, answer, proposal.language);
-      
-      if (
-        typeof evalResult.correctness === 'number' &&
-        typeof evalResult.relevance === 'number' &&
-        typeof evalResult.depth === 'number' &&
-        typeof evalResult.justification === 'number' &&
-        typeof evalResult.clarity === 'number' &&
-        typeof evalResult.feedback === 'string'
-      ) {
-        await dbStore.saveEvaluation({
-          id: `${session.id}_${lastQuestion.id}`,
-          sessionId: session.id,
-          messageId: lastQuestion.id,
-          correctness: evalResult.correctness,
-          relevance: evalResult.relevance,
-          depth: evalResult.depth,
-          justification: evalResult.justification,
-          clarity: evalResult.clarity,
-          feedback: evalResult.feedback,
-          evaluatedAt: Date.now()
-        });
-        const evaluationAverage = (
-          evalResult.correctness +
-          evalResult.relevance +
-          evalResult.depth +
-          evalResult.justification +
-          evalResult.clarity
-        ) / 5;
-        session.difficulty = Math.max(
-          1,
-          Math.min(5, session.difficulty + (evaluationAverage >= 4 ? 1 : evaluationAverage <= 2 ? -1 : 0))
-        );
-        await dbStore.saveSession(session);
-        currentSession.set(session);
+      try {
+        const provider = getProvider();
+        const evalResult = await evaluateAnswer(provider, lastQuestion.content, answer, proposal.language);
+        
+        if (
+          typeof evalResult.correctness === 'number' &&
+          typeof evalResult.relevance === 'number' &&
+          typeof evalResult.depth === 'number' &&
+          typeof evalResult.justification === 'number' &&
+          typeof evalResult.clarity === 'number' &&
+          typeof evalResult.feedback === 'string'
+        ) {
+          await dbStore.saveEvaluation({
+            id: `${session.id}_${lastQuestion.id}`,
+            sessionId: session.id,
+            messageId: lastQuestion.id,
+            correctness: evalResult.correctness,
+            relevance: evalResult.relevance,
+            depth: evalResult.depth,
+            justification: evalResult.justification,
+            clarity: evalResult.clarity,
+            feedback: evalResult.feedback,
+            evaluatedAt: Date.now()
+          });
+          const evaluationAverage = (
+            evalResult.correctness +
+            evalResult.relevance +
+            evalResult.depth +
+            evalResult.justification +
+            evalResult.clarity
+          ) / 5;
+          session.difficulty = Math.max(
+            1,
+            Math.min(5, session.difficulty + (evaluationAverage >= 4 ? 1 : evaluationAverage <= 2 ? -1 : 0))
+          );
+          await dbStore.saveSession(session);
+          currentSession.set(session);
+        }
+      } catch (evalErr) {
+        console.warn("Evaluation step failed, continuing to next question:", evalErr);
       }
     }
     
@@ -233,6 +305,9 @@ export async function submitAnswer(answer: string) {
 
     // Automatically transition to the next question for MVP
     await askNextQuestion();
+  } catch (err: any) {
+    console.error("Error submitting answer:", err);
+    sessionError.set(formatFriendlyErrorMessage(err));
   } finally {
     isProcessing.set(false);
   }
@@ -259,15 +334,24 @@ export async function endInterview() {
   const proposal = currentProposal.get();
   if (!session || !proposal) return;
   
+  sessionError.set(null);
   isProcessing.set(true);
   try {
+    if (session.state === 'READY') {
+      Object.assign(session, transitionSession(session, 'QUESTIONING'));
+      Object.assign(session, transitionSession(session, 'WAITING_FOR_ANSWER'));
+    }
     if (session.state === 'WAITING_FOR_ANSWER') {
       Object.assign(session, transitionSession(session, 'EVALUATING'));
       Object.assign(session, transitionSession(session, 'COMPLETED'));
     } else if (session.state === 'EVALUATING') {
       Object.assign(session, transitionSession(session, 'COMPLETED'));
     }
-    Object.assign(session, transitionSession(session, 'REPORT_GENERATION'));
+    if (session.state === 'COMPLETED') {
+      Object.assign(session, transitionSession(session, 'REPORT_GENERATION'));
+    } else if (session.state !== 'REPORT_GENERATION') {
+      session.state = 'REPORT_GENERATION';
+    }
     await dbStore.saveSession(session);
     currentSession.set(session);
     
@@ -290,7 +374,8 @@ export async function endInterview() {
     session.state = 'COMPLETED';
     await dbStore.saveSession(session);
     currentSession.set(session);
-    alert(`Gagal menyusun catatan bimbingan: ${e?.message || 'Terjadi kesalahan saat memproses laporan.'}`);
+    endingStatusMessage.set(null);
+    sessionError.set(formatFriendlyErrorMessage(e));
   } finally {
     isProcessing.set(false);
   }

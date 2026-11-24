@@ -1,17 +1,17 @@
 <script lang="ts">
   import './i18n/index'; // Initialize i18n first
   import { onMount } from 'svelte';
-  import { currentSession } from './lib/interview/controller';
+  import { currentSession, restoreActiveSession } from './lib/interview/controller';
   import { uiLanguage, showSettings } from './lib/state/stores';
   import { initTheme } from './lib/state/theme';
   import FileUploader from './components/upload/FileUploader.svelte';
   import SplitLayout from './components/layout/SplitLayout.svelte';
   import SettingsModal from './components/layout/SettingsModal.svelte';
-  import ApiKeyGuide from './components/layout/ApiKeyGuide.svelte';
   import Icon from './components/common/Icon.svelte';
   import { t, isLoading } from 'svelte-i18n';
 
   onMount(() => {
+    restoreActiveSession();
     return initTheme();
   });
 
@@ -38,24 +38,26 @@
           
           <!-- Top Section: Minimalist Nav -->
           <div class="flex justify-between items-center w-full">
-            <span class="font-serif text-lg font-normal tracking-tight text-ink dark:text-ink-dark">
-              {$t('landing.appName')}
-            </span>
+            <div class="flex items-center">
+              <span class="font-serif text-lg font-medium tracking-tight text-ink dark:text-ink-dark">
+                {$t('landing.appName')}
+              </span>
+            </div>
 
-            <div class="flex items-center gap-4 text-xs font-mono">
+            <div class="flex items-center gap-2 text-xs font-sans">
               <button
                 type="button"
                 on:click={toggleLanguage}
-                class="text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider p-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+                class="min-w-[40px] min-h-[40px] text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors font-medium px-3 py-2 rounded-md border border-hairline/80 dark:border-hairline-dark/80 hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer flex items-center justify-center"
                 aria-label={$t('landing.toggleLanguageAria')}
                 title={$t('landing.toggleLanguage')}
               >
-                {$uiLanguage}
+                {$uiLanguage === 'id' ? 'ID' : 'EN'}
               </button>
               <button
                 type="button"
-                on:click={() => $showSettings = true}
-                class="text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors p-1 rounded-xs flex items-center justify-center focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+                on:click={() => showSettings.set(true)}
+                class="w-10 h-10 text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors rounded-md hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer"
                 aria-label={$t('landing.settingsAria')}
                 title={$t('landing.settings')}
               >
@@ -65,17 +67,14 @@
           </div>
 
           <!-- Main Content: Flows naturally from top with comfortable spacing -->
-          <div class="mt-12 sm:mt-16 lg:mt-20 max-w-md w-full space-y-6">
-            <h1 class="font-serif text-3xl sm:text-4xl lg:text-[2.75rem] font-normal text-ink dark:text-ink-dark tracking-tight leading-[1.15]">
+          <div class="mt-14 sm:mt-18 lg:mt-24 max-w-lg w-full space-y-6">
+            <h1 class="font-serif text-3xl sm:text-4xl lg:text-[2.85rem] font-medium text-ink dark:text-ink-dark tracking-tight leading-[1.14]">
               {$t('landing.headline')}
             </h1>
 
-            <p class="text-sm sm:text-base text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans font-normal">
+            <p class="text-sm sm:text-base text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans font-normal max-w-md">
               {$t('landing.description')}
             </p>
-
-            <!-- API Key Status Row -->
-            <ApiKeyGuide />
           </div>
 
         </div>
@@ -88,7 +87,5 @@
     {/if}
   </div>
 
-  {#if $showSettings}
-    <SettingsModal bind:isOpen={$showSettings} />
-  {/if}
+  <SettingsModal />
 {/if}

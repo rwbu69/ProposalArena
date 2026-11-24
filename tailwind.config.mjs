@@ -5,8 +5,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        serif: ['"Lora"', 'Georgia', 'serif'],
-        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        serif: ['"Newsreader"', '"Lora"', 'Georgia', 'serif'],
+        sans: ['"Plus Jakarta Sans"', '"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {

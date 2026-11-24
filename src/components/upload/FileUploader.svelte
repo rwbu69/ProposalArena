@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { fade } from "svelte/transition";
   import {
     extractTextFromFile,
     detectLanguage,
@@ -23,31 +22,30 @@
   let file: File | null = null;
   let errorStr = "";
   let fileInput: HTMLInputElement;
-  let showPrivacyDetails = false;
-  let providerName = "Google Gemini";
   let processingStage: "" | "reading" | "saving" | "analyzing" = "";
   let extractedText = "";
   let extractedFileData: ArrayBuffer | undefined;
   let detectedLanguage: "en" | "id" = "en";
   let showLanguageConfirmation = false;
 
+  const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
   function errorMessage(error: unknown) {
-    return error instanceof Error ? error.message : $t("upload.errorUnknown");
-  }
-
-  function updateProviderName() {
-    const s = loadSettings();
-    if (s?.providerId === "openrouter") providerName = "OpenRouter";
-    else if (s?.providerId === "openai") providerName = "OpenAI";
-    else providerName = "Google Gemini";
-  }
-
-  onMount(() => {
-    updateProviderName();
-  });
-
-  $: if (!$showSettings) {
-    updateProviderName();
+    const raw = error instanceof Error ? error.message : $t("upload.errorUnknown");
+    const lower = raw.toLowerCase();
+    if (lower.includes('dynamically imported module') || lower.includes('failed to fetch dynamically')) {
+      return 'Modul sistem peramban sempat memuat ulang. Silakan pilih atau unggah kembali berkas proposalmu.';
+    }
+    if (lower.includes('gemini_api_key') || lower.includes('api key belum')) {
+      return 'Gemini API Key belum terkonfigurasi. Silakan klik tombol "Buka Settings" di bawah untuk memasukkan API Key.';
+    }
+    if (lower.includes('503') || lower.includes('overloaded') || lower.includes('429')) {
+      return 'Layanan Google Gemini sedang padat. Silakan coba kembali dalam beberapa detik.';
+    }
+    if (lower.includes('failed to fetch') || lower.includes('networkerror') || lower.includes('unable to reach')) {
+      return 'Koneksi ke server AI terputus. Pastikan koneksi internet stabil dan coba kembali.';
+    }
+    return raw;
   }
 
   function handleDrop(e: DragEvent) {
@@ -69,12 +67,16 @@
 
   function handleFiles(selectedFile: File) {
     const validTypes = ["application/pdf"];
-    if (validTypes.includes(selectedFile.type) || selectedFile.name.toLowerCase().endsWith('.pdf')) {
-      file = selectedFile;
-      processFile();
-    } else {
+    if (!validTypes.includes(selectedFile.type) && !selectedFile.name.toLowerCase().endsWith('.pdf')) {
       errorStr = $t("upload.errorPdfOnly");
+      return;
     }
+    if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+      errorStr = $t("upload.errorFileTooLarge");
+      return;
+    }
+    file = selectedFile;
+    processFile();
   }
 
   async function processFile() {
@@ -120,14 +122,14 @@
       const proxyUrl = import.meta.env.PUBLIC_AI_PROXY_URL || settings?.proxyUrl;
       const usesServerProxy = proxyUrl?.startsWith('/');
       if (!usesServerProxy && (!settings?.apiKey || settings.apiKey.trim().length < 5)) {
-        $showSettings = true;
+        showSettings.set(true);
         throw new Error($t("upload.errorNoApiKey"));
       }
 
       const provider = createAIProvider({
-        providerId: usesServerProxy ? "openrouter" : (settings.providerId || "gemini"),
+        providerId: "gemini",
         apiKey: settings?.apiKey,
-        model: usesServerProxy ? DEFAULT_SERVER_PROXY_MODEL : (settings.model || "gemini-3.5-flash-lite"),
+        model: usesServerProxy ? DEFAULT_SERVER_PROXY_MODEL : (settings?.model || "gemini-3.5-flash-lite"),
         proxyUrl: proxyUrl || "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       });
 
@@ -140,8 +142,12 @@
       $currentAnalysis = analysis;
       await initSession(proposal.id);
 
-      const { globalIndexer } = await import("../../lib/search/indexer");
-      globalIndexer.indexProposal(proposal.id, extractedText);
+      try {
+        const { globalIndexer } = await import("../../lib/search/indexer");
+        globalIndexer.indexProposal(proposal.id, extractedText);
+      } catch (indexErr) {
+        console.warn("Failed to index proposal on upload:", indexErr);
+      }
     } catch (e: unknown) {
       errorStr = errorMessage(e);
     } finally {
@@ -155,61 +161,57 @@
   class="w-full h-full bg-paper-surface dark:bg-paper-surface-dark flex flex-col items-center justify-center p-8 sm:p-14 lg:p-20 relative select-none transition-colors duration-150 {dragOver
     ? 'bg-paper dark:bg-paper-dark'
     : ''}"
-  role="button"
-  tabindex="0"
   on:dragover|preventDefault={() => (dragOver = true)}
   on:dragleave={() => (dragOver = false)}
   on:drop={handleDrop}
-  on:click={() => fileInput.click()}
-  on:keydown={(e) => e.key === "Enter" && fileInput.click()}
 >
-  <!-- Hairline Drop Frame -->
+  <!-- Drop Frame -->
   <div
-    class="w-full max-w-lg border border-hairline dark:border-hairline-dark p-10 sm:p-14 flex flex-col items-start justify-center transition-colors duration-150 {dragOver
-      ? 'border-ink dark:border-ink-dark bg-paper dark:bg-paper-dark'
-      : 'hover:border-ink-muted dark:hover:border-ink-muted-dark'}"
+    class="w-full max-w-lg rounded-2xl border-2 border-dashed border-hairline dark:border-hairline-dark p-8 sm:p-12 lg:p-14 flex flex-col items-start justify-center transition-all duration-200 {dragOver
+      ? 'border-accent dark:border-accent-dark bg-paper dark:bg-paper-dark shadow-xl scale-[1.01]'
+      : 'hover:border-ink-muted/50 dark:hover:border-ink-muted-dark/50 bg-paper/60 dark:bg-paper-dark/60 shadow-xs'}"
   >
     {#if showLanguageConfirmation}
-      <div class="space-y-5 w-full" on:click|stopPropagation>
-        <div class="space-y-2">
-          <span class="text-[10px] font-mono uppercase tracking-widest text-ink-faint dark:text-ink-faint-dark">
+      <div class="space-y-5 w-full">
+        <div class="space-y-1.5">
+          <span class="text-xs font-sans font-medium text-accent dark:text-accent-dark">
             {$t("upload.languageLabel")}
           </span>
-          <h2 class="font-serif text-2xl text-ink dark:text-ink-dark">
+          <h2 class="font-sans text-xl font-semibold text-ink dark:text-ink-dark tracking-tight">
             {$t("upload.languageTitle")}
           </h2>
-          <p class="text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed">
+          <p class="text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">
             {$t("upload.languageDescription")}
           </p>
         </div>
-        <div class="border-y border-hairline dark:border-hairline-dark py-3 flex items-center justify-between">
-          <span class="text-sm text-ink dark:text-ink-dark">
+        <div class="border-y border-hairline/80 dark:border-hairline-dark/80 py-3 flex items-center justify-between">
+          <span class="text-sm font-medium text-ink dark:text-ink-dark font-sans">
             {detectedLanguage === "id" ? "Bahasa Indonesia" : "English"}
           </span>
-          <span class="text-[10px] font-mono uppercase tracking-widest text-ink-faint dark:text-ink-faint-dark">
+          <span class="text-[11px] font-sans text-ink-faint dark:text-ink-faint-dark px-2 py-0.5 rounded-full bg-hairline/50 dark:bg-hairline-dark/50">
             {$t("upload.languageDetected")}
           </span>
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <button type="button" on:click={() => (detectedLanguage = "en")} class="px-3 py-2 border text-left text-xs font-mono rounded-xs {detectedLanguage === 'en' ? 'border-accent bg-accent/10 text-ink dark:text-ink-dark' : 'border-hairline dark:border-hairline-dark text-ink-muted dark:text-ink-muted-dark'}">
+        <div class="grid grid-cols-2 gap-2.5">
+          <button type="button" on:click={() => (detectedLanguage = "en")} class="px-3.5 py-2.5 border text-left text-xs font-sans font-medium rounded-lg transition-colors {detectedLanguage === 'en' ? 'border-accent bg-accent/10 dark:bg-accent-dark/15 text-ink dark:text-ink-dark' : 'border-hairline dark:border-hairline-dark text-ink-muted dark:text-ink-muted-dark hover:border-ink-muted'}">
             English
           </button>
-          <button type="button" on:click={() => (detectedLanguage = "id")} class="px-3 py-2 border text-left text-xs font-mono rounded-xs {detectedLanguage === 'id' ? 'border-accent bg-accent/10 text-ink dark:text-ink-dark' : 'border-hairline dark:border-hairline-dark text-ink-muted dark:text-ink-muted-dark'}">
+          <button type="button" on:click={() => (detectedLanguage = "id")} class="px-3.5 py-2.5 border text-left text-xs font-sans font-medium rounded-lg transition-colors {detectedLanguage === 'id' ? 'border-accent bg-accent/10 dark:bg-accent-dark/15 text-ink dark:text-ink-dark' : 'border-hairline dark:border-hairline-dark text-ink-muted dark:text-ink-muted-dark hover:border-ink-muted'}">
             Bahasa Indonesia
           </button>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button type="button" on:click={() => continueWithLanguage(detectedLanguage)} class="px-4 py-2 bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark text-xs font-mono rounded-xs">
+        <div class="pt-1">
+          <button type="button" on:click={() => continueWithLanguage(detectedLanguage)} class="px-5 py-2.5 bg-ink hover:bg-ink/90 dark:bg-ink-dark dark:hover:bg-ink-dark/90 text-paper dark:text-paper-dark text-xs font-sans font-medium rounded-lg transition-all shadow-sm">
             {$t("upload.languageContinue")}
           </button>
         </div>
       </div>
     {:else if $isProcessing}
       <!-- QUIET PROCESSING STATE -->
-      <div class="space-y-3 w-full">
-        <div class="flex items-center gap-2.5">
-          <span class="inline-block w-2 h-2 rounded-full bg-accent dark:bg-accent-dark animate-pulse"></span>
-          <span class="font-serif text-lg text-ink dark:text-ink-dark font-normal">
+      <div class="space-y-4 w-full">
+        <div class="flex items-center gap-3">
+          <Icon name="loader" size={18} class="animate-spin text-accent dark:text-accent-dark shrink-0" />
+          <span class="font-sans text-lg font-medium text-ink dark:text-ink-dark">
             {processingStage === "reading"
               ? $t("upload.stageReading")
               : processingStage === "analyzing"
@@ -219,73 +221,48 @@
                   : $t("upload.readingDoc")}
           </span>
         </div>
-        <p class="text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
+        <p class="text-xs font-sans text-ink-muted dark:text-ink-muted-dark leading-relaxed">
           {$t("upload.processingHint")}
         </p>
-        <div class="flex gap-2 pt-2 text-[10px] font-mono uppercase tracking-wider text-ink-faint dark:text-ink-faint-dark">
-          <span class={processingStage === "reading" ? "text-accent dark:text-accent-dark" : ""}>{$t("upload.stageReading")}</span>
+        <div class="flex items-center gap-2 pt-2 text-xs font-sans text-ink-faint dark:text-ink-faint-dark">
+          <span class={processingStage === "reading" ? "text-accent dark:text-accent-dark font-medium" : ""}>{$t("upload.stageReading")}</span>
           <span>·</span>
-          <span class={processingStage === "analyzing" ? "text-accent dark:text-accent-dark" : ""}>{$t("upload.stageAnalyzing")}</span>
+          <span class={processingStage === "analyzing" ? "text-accent dark:text-accent-dark font-medium" : ""}>{$t("upload.stageAnalyzing")}</span>
           <span>·</span>
-          <span class={processingStage === "saving" ? "text-accent dark:text-accent-dark" : ""}>{$t("upload.stageSaving")}</span>
+          <span class={processingStage === "saving" ? "text-accent dark:text-accent-dark font-medium" : ""}>{$t("upload.stageSaving")}</span>
         </div>
       </div>
     {:else}
       <!-- RESTING / DRAG STATE -->
-      <div class="space-y-4 w-full text-left">
-        <div class="text-[11px] font-mono uppercase tracking-widest text-ink-faint dark:text-ink-faint-dark">
-          {$t("upload.sectionLabel")}
+      <div class="space-y-5 w-full text-left">
+        <div class="w-12 h-12 rounded-xl bg-accent/10 dark:bg-accent-dark/15 text-accent dark:text-accent-dark flex items-center justify-center">
+          <Icon name="upload" size={22} />
         </div>
 
-        <h2 class="font-serif text-2xl sm:text-3xl font-normal text-ink dark:text-ink-dark tracking-tight leading-snug">
-          {dragOver ? $t("upload.dropPrompt") : $t("upload.title")}
-        </h2>
+        <div class="space-y-1.5">
+          <h2 class="font-sans text-xl sm:text-2xl font-semibold text-ink dark:text-ink-dark tracking-tight">
+            {dragOver ? $t("upload.dropPrompt") : $t("upload.title")}
+          </h2>
 
-        <p class="text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans max-w-md">
-          {$t("upload.description")}
-        </p>
+          <p class="text-sm text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans max-w-md">
+            {$t("upload.description")}
+          </p>
+        </div>
 
-        <div class="pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
           <button
             type="button"
             on:click|stopPropagation={() => fileInput.click()}
-            class="inline-flex items-center gap-2.5 px-5 py-2.5 bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark text-xs font-mono tracking-wider transition-colors cursor-pointer rounded-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent-dark focus-visible:ring-offset-2 focus-visible:ring-offset-paper-surface dark:focus-visible:ring-offset-paper-surface-dark"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-ink hover:bg-ink/90 dark:bg-ink-dark dark:hover:bg-ink-dark/90 text-paper dark:text-paper-dark text-sm font-medium transition-all cursor-pointer rounded-lg shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
             aria-label={$t("upload.selectFileAria")}
           >
-            <Icon name="upload" size={16} />
+            <Icon name="upload" size={15} />
             <span>{$t("upload.selectFile")}</span>
           </button>
-          <span class="text-xs font-mono text-ink-faint dark:text-ink-faint-dark">
+          
+          <span class="text-xs font-sans text-ink-faint dark:text-ink-faint-dark">
             {$t("upload.fileLimit")}
           </span>
-        </div>
-
-        <!-- Privacy Note: One quiet sentence directly beneath upload action with inline Detail toggle -->
-        <div
-          class="pt-3 text-xs text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans max-w-md"
-          on:click|stopPropagation
-        >
-          <span>{$t("landing.privacyNote", { values: { provider: providerName } })}</span>
-          {' '}
-          <button
-            type="button"
-            class="underline underline-offset-2 text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors inline cursor-pointer p-0.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
-            aria-expanded={showPrivacyDetails}
-            aria-label={$t("landing.privacyDetailAria")}
-            on:click={() => (showPrivacyDetails = !showPrivacyDetails)}
-          >
-            {$t("landing.privacyDetailToggle")}
-          </button>
-
-          {#if showPrivacyDetails}
-            <div
-              transition:fade={{ duration: 150 }}
-              class="mt-2 space-y-1 text-ink-faint dark:text-ink-faint-dark text-[11px] leading-normal"
-            >
-              <p>{$t("landing.privacyDetailStorage")}</p>
-              <p>{$t("landing.privacyDetailPolicy", { values: { provider: providerName } })}</p>
-            </div>
-          {/if}
         </div>
       </div>
     {/if}
@@ -293,19 +270,24 @@
     <!-- ERROR NOTICE -->
     {#if errorStr}
       <div
-        class="mt-6 pt-4 border-t border-hairline dark:border-hairline-dark w-full space-y-2"
-        on:click|stopPropagation
+        class="mt-6 pt-4 border-t border-hairline dark:border-hairline-dark w-full space-y-3"
       >
-        <p class="text-xs text-red-700 dark:text-red-400 font-sans leading-relaxed">
-          {errorStr}
-        </p>
-        <button
-          type="button"
-          on:click={() => ($showSettings = true)}
-          class="font-mono text-xs text-ink dark:text-ink-dark underline underline-offset-4 hover:text-ink-muted"
-        >
-          {$t("tutorial.openSettings")} →
-        </button>
+        <div class="flex items-start gap-2.5 text-xs text-red-600 dark:text-red-400 font-sans leading-relaxed p-3.5 rounded-xl bg-red-500/10 border border-red-500/20">
+          <Icon name="alert-triangle" size={16} class="shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+          <p class="m-0 break-words flex-1">
+            {errorStr}
+          </p>
+        </div>
+        <div class="pt-1">
+          <button
+            type="button"
+            on:click|stopPropagation={() => showSettings.set(true)}
+            class="inline-flex items-center gap-2 px-4 py-2.5 bg-ink hover:bg-ink/90 dark:bg-ink-dark dark:hover:bg-ink-dark/90 text-paper dark:text-paper-dark text-xs font-sans font-medium rounded-lg shadow-sm transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          >
+            <Icon name="settings" size={14} />
+            <span>{$t("tutorial.openSettings")}</span>
+          </button>
+        </div>
       </div>
     {/if}
   </div>

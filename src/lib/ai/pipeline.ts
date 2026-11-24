@@ -70,10 +70,14 @@ export async function generateQuestion(provider: AIProvider, analysis: ProposalA
   // Advanced Grounding: search for relevant chunks
   let relevantContext = 'No specific excerpts retrieved.';
   if (analysis.id) {
-    const { globalIndexer } = await import('../search/indexer');
-    const chunks = globalIndexer.searchContext(analysis.id, transcriptText);
-    if (chunks.length > 0) {
-      relevantContext = chunks.join('\n\n---\n\n');
+    try {
+      const { globalIndexer } = await import('../search/indexer');
+      const chunks = globalIndexer.searchContext(analysis.id, transcriptText);
+      if (chunks.length > 0) {
+        relevantContext = chunks.join('\n\n---\n\n');
+      }
+    } catch (searchErr) {
+      console.warn("Context search retrieval failed, proceeding with proposal analysis:", searchErr);
     }
   }
 
@@ -101,6 +105,7 @@ export async function generateQuestion(provider: AIProvider, analysis: ProposalA
 export async function evaluateAnswer(provider: AIProvider, question: string, answer: string, language: 'en' | 'id'): Promise<Partial<AnswerEvaluation>> {
   const sysLang = language === 'en' ? 'English' : 'Bahasa Indonesia';
   const prompt = `Evaluate the student's answer to the question in ${sysLang}.
+Note: For Indonesian responses, accept standard Computer Science English terms (e.g., overfitting, loss function, ground truth, fine-tuning, benchmark, pipeline) naturally without penalty.
 Return ONLY a JSON object with this schema:
 {
   "correctness": Number (1-5),
@@ -230,7 +235,7 @@ ${transcriptText}`;
     try {
       parsed = cleanAndParseJson<unknown>(retryResponse.text);
     } catch {
-      throw new Error('The AI model did not return a valid JSON report. Try another OpenRouter model.');
+      throw new Error('The AI model did not return a valid JSON report. Please retry.');
     }
   }
 

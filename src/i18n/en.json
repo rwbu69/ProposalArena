@@ -47,30 +47,31 @@
     "languageTitle": "Confirm the defense language",
     "languageDescription": "The examiner, evaluations, and final report will use this language. You can change the detected result before continuing.",
     "languageDetected": "Detected",
-    "languageContinue": "Continue",
+    "languageContinue": "Continue to Defense",
     "languageChange": "Use other language",
-    "sectionLabel": "Proposal Document",
+    "sectionLabel": "Thesis Document",
     "selectFile": "Select PDF File",
     "selectFileAria": "Select proposal PDF file to upload",
     "fileLimit": "Max 10 MB • PDF",
     "errorPdfOnly": "Only PDF files are supported. Please upload your proposal in PDF format.",
-    "errorNoApiKey": "API Key is not configured. Please enter your API Key in Settings."
-    ,"errorUnknown": "The file could not be processed. Please try again."
+    "errorFileTooLarge": "File size exceeds the 10 MB maximum limit. Please compress or choose a smaller PDF file.",
+    "errorNoApiKey": "API Key is not configured. Please enter your API Key in Settings.",
+    "errorUnknown": "The file could not be processed. Please try again."
   },
   "landing": {
     "appName": "Proposal Arena",
-    "headline": "Proposal defense rehearsal.",
-    "description": "Upload your proposal, answer the examiner's questions out loud or in writing, then review your debrief notes.",
+    "headline": "Rehearse Your Thesis Proposal Defense",
+    "description": "Face rigorous examiner inquiries on your methodology, dataset validation, and research gaps — through interactive voice or text.",
     "settings": "Settings",
     "settingsAria": "Open settings",
     "toggleLanguage": "Switch Language",
     "toggleLanguageAria": "Switch interface language",
     "loading": "Loading...",
-    "privacyNote": "Your proposal is read in your browser, then its text is sent to {provider} for analysis. There is no server of ours in between.",
+    "privacyNote": "Your proposal is processed securely in your browser and sent to Google Gemini for analysis.",
     "privacyDetailToggle": "Details",
     "privacyDetailAria": "Show privacy and data storage details",
     "privacyDetailStorage": "Your proposal, defense transcripts, and debrief notes are stored locally in your browser's IndexedDB. Your API key stays in localStorage.",
-    "privacyDetailPolicy": "Text processing is subject to {provider}'s privacy policy and terms."
+    "privacyDetailPolicy": "Text processing is subject to Google Gemini's privacy policy and terms."
   },
   "settings": {
     "title": "Settings",
@@ -101,6 +102,9 @@
   },
   "interview": {
     "start": "Start Defense",
+    "starting": "Preparing Question...",
+    "preparingQuestion": "Examiner is preparing the question...",
+    "preparingVoice": "Preparing examiner voice...",
     "startAria": "Start thesis proposal defense simulation",
     "next": "Next Question",
     "finish": "Finish Defense",
@@ -195,7 +199,15 @@
     "practiceDesc": "Prompt questions to test the sharpness of your response and research defense logic.",
     "sessionMeta": "Simulation Context",
     "date": "Execution Time",
-    "focusNotice": "Session Focus Note"
+    "focusNotice": "Session Focus Note",
+    "scoresTitle": "Answer Evaluation Scores",
+    "scoreOverall": "Overall Average",
+    "scoreCorrectness": "Correctness",
+    "scoreRelevance": "Relevance",
+    "scoreDepth": "Depth",
+    "scoreJustification": "Justification",
+    "scoreClarity": "Clarity",
+    "scoreCount": "Based on {count} evaluated answers"
   },
   "tutorial": {
     "getApiKey": "API Key Guide (Free)",

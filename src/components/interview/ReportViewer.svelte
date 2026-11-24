@@ -4,7 +4,7 @@
   import { dbStore } from '../../lib/db/database';
   import { normalizeDefenseReport } from '../../lib/ai/pipeline';
   import { initTheme } from '../../lib/state/theme';
-  import type { DefenseReport, InterviewSession, Proposal } from '../../types/domain';
+  import type { AnswerEvaluation, DefenseReport, InterviewSession, Proposal } from '../../types/domain';
   import { t, isLoading } from 'svelte-i18n';
   import Icon from '../common/Icon.svelte';
 
@@ -17,6 +17,7 @@
   let report: DefenseReport | null = null;
   let session: InterviewSession | null = null;
   let proposal: Proposal | null = null;
+  let evaluations: AnswerEvaluation[] = [];
   let loadingData = true;
   let isDemo = false;
   let copied = false;
@@ -119,6 +120,9 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       if (session?.proposalId && !isDemo) {
         proposal = (await dbStore.getProposal(session.proposalId)) || null;
       }
+      if (session?.id && !isDemo) {
+        evaluations = await dbStore.getEvaluations(session.id);
+      }
     } catch (err) {
       console.error('Failed to load report from IndexedDB:', err);
       if (!report) {
@@ -135,6 +139,30 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
     window.print();
   }
 
+  $: scoreSummary = evaluations.length > 0
+    ? (() => {
+        const n = evaluations.length;
+        const avg = (key: 'correctness' | 'relevance' | 'depth' | 'justification' | 'clarity') =>
+          evaluations.reduce((sum, e) => sum + (e[key] || 0), 0) / n;
+        const correctness = avg('correctness');
+        const relevance = avg('relevance');
+        const depth = avg('depth');
+        const justification = avg('justification');
+        const clarity = avg('clarity');
+        const overall = (correctness + relevance + depth + justification + clarity) / 5;
+        return {
+          count: n,
+          overall,
+          overall100: Math.round(overall * 20),
+          correctness,
+          relevance,
+          depth,
+          justification,
+          clarity
+        };
+      })()
+    : null;
+
   async function handleCopyFullReport() {
     if (!report) return;
     const strengths = report.strengths || [];
@@ -147,6 +175,9 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       `=== ${$t('report.title').toUpperCase()} ===`,
       proposal?.title ? `Proposal: ${proposal.title}` : '',
       `Waktu: ${formatDate(report.generatedAt || session?.createdAt)}`,
+      scoreSummary
+        ? `${$t('report.scoreOverall')}: ${scoreSummary.overall.toFixed(1)}/5 (${scoreSummary.overall100}/100)`
+        : '',
       '',
       `[${$t('report.summary')}]`,
       report.summary || '',
@@ -216,7 +247,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       <nav class="flex justify-between items-center gap-4 mb-16 pb-4 border-b border-hairline dark:border-hairline-dark no-print">
         <a
           href="/"
-          class="inline-flex items-center gap-2 text-xs font-mono text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider px-2 py-1.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          class="inline-flex items-center gap-2 min-h-[40px] text-xs font-sans font-medium text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors px-3 py-2 rounded-lg hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer"
           aria-label={$t('report.returnAria')}
         >
           <Icon name="arrow-left" size={14} />
@@ -224,11 +255,11 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
         </a>
 
         {#if report}
-          <div class="flex items-center gap-3 text-xs font-mono">
+          <div class="flex items-center gap-2.5 text-xs font-sans font-medium">
             <button
               type="button"
               on:click={handleCopyFullReport}
-              class="inline-flex items-center gap-1.5 text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors px-2.5 py-1.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+              class="inline-flex items-center gap-1.5 min-h-[40px] text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors px-3 py-2 rounded-lg hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer"
               aria-label={$t('report.copyNotesAria')}
             >
               <Icon name={copied ? 'check' : 'copy'} size={14} class={copied ? 'text-green-600 dark:text-green-400' : ''} />
@@ -238,7 +269,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
             <button
               type="button"
               on:click={handlePrint}
-              class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark transition-colors rounded-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent-dark"
+              class="inline-flex items-center gap-2 min-h-[40px] px-4 py-2 bg-ink hover:bg-ink/90 dark:bg-ink-dark dark:hover:bg-ink-dark/90 text-paper dark:text-paper-dark transition-all rounded-lg shadow-sm cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
               aria-label={$t('report.printAria')}
             >
               <Icon name="printer" size={15} />
@@ -249,9 +280,9 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       </nav>
 
       {#if isDemo}
-        <div class="mb-12 py-3 px-4 border border-hairline dark:border-hairline-dark bg-paper-surface dark:bg-paper-surface-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs font-mono text-ink-muted dark:text-ink-muted-dark no-print">
+        <div class="mb-12 py-3 px-4 border border-hairline dark:border-hairline-dark bg-paper-surface dark:bg-paper-surface-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs font-sans text-ink-muted dark:text-ink-muted-dark no-print rounded-xl">
           <span>{$t('report.demoBanner')}</span>
-          <a href="/" class="inline-flex items-center gap-1 underline text-ink dark:text-ink-dark hover:opacity-80 px-1 py-0.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark">
+          <a href="/" class="inline-flex items-center gap-1 underline text-ink dark:text-ink-dark hover:opacity-80 px-1 py-0.5 rounded-md focus:outline-none">
             <span>{$t('report.startNewSession')}</span>
             <Icon name="arrow-right" size={13} />
           </a>
@@ -261,10 +292,10 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       {#if !report}
         <!-- EMPTY STATE -->
         <div class="py-20 text-left space-y-4">
-          <p class="text-sm font-mono text-ink-muted">
+          <p class="text-sm font-sans text-ink-muted">
             {$t('report.emptyReport')}
           </p>
-          <a href="/" class="inline-flex items-center gap-1.5 text-xs font-mono text-ink underline underline-offset-4 px-1 py-0.5 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark">
+          <a href="/" class="inline-flex items-center gap-1.5 text-xs font-sans font-medium text-ink underline underline-offset-4 px-1 py-0.5 rounded-md focus:outline-none">
             <Icon name="arrow-left" size={14} />
             <span>{$t('report.return')}</span>
           </a>
@@ -272,11 +303,11 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       {:else}
 
         <!-- HEADER SECTION -->
-        <header class="mb-16 print-break-inside-avoid space-y-3">
-          <span class="text-[10px] uppercase tracking-widest font-mono text-ink-faint dark:text-ink-faint-dark block">
+        <header class="mb-12 space-y-3">
+          <span class="text-xs font-sans font-semibold uppercase tracking-wider text-accent dark:text-accent-dark block">
             {$t('report.tag')}
           </span>
-          <h1 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-ink dark:text-ink-dark leading-tight">
+          <h1 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-ink dark:text-ink-dark leading-tight">
             {$t('report.title')}
           </h1>
           <p class="text-sm sm:text-base text-ink-muted dark:text-ink-muted-dark font-sans leading-relaxed pt-1">
@@ -284,9 +315,9 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
           </p>
 
           <!-- CONTEXT METADATA -->
-          <div class="pt-6 border-t border-hairline dark:border-hairline-dark flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-mono text-ink-faint dark:text-ink-faint-dark">
+          <div class="pt-6 border-t border-hairline dark:border-hairline-dark flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-sans text-ink-muted dark:text-ink-muted-dark">
             {#if proposal?.title}
-              <div class="truncate max-w-lg text-ink dark:text-ink-dark font-sans font-normal">
+              <div class="truncate max-w-lg text-ink dark:text-ink-dark font-sans font-medium">
                 {proposal.title}
               </div>
             {/if}
@@ -296,8 +327,49 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
           </div>
         </header>
 
+        {#if scoreSummary}
+          <!-- EVALUATION SCORES -->
+          <section class="mb-12 border-t border-hairline dark:border-hairline-dark pt-8 space-y-5">
+            <div class="flex flex-wrap items-baseline justify-between gap-4 print-break-inside-avoid">
+              <div>
+                <h2 class="font-serif text-xl sm:text-2xl font-normal text-ink dark:text-ink-dark tracking-tight">
+                  {$t('report.scoresTitle')}
+                </h2>
+                <p class="text-xs text-ink-faint dark:text-ink-faint-dark mt-0.5">
+                  {$t('report.scoreCount').replace('{count}', scoreSummary.count.toString())}
+                </p>
+              </div>
+              <div class="flex items-baseline gap-2">
+                <span class="font-serif text-3xl font-medium text-ink dark:text-ink-dark">
+                  {scoreSummary.overall100}
+                </span>
+                <span class="text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
+                  / 100 ({scoreSummary.overall.toFixed(1)}/5)
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 print-break-inside-avoid">
+              {#each [
+                { label: $t('report.scoreCorrectness'), value: scoreSummary.correctness },
+                { label: $t('report.scoreRelevance'), value: scoreSummary.relevance },
+                { label: $t('report.scoreDepth'), value: scoreSummary.depth },
+                { label: $t('report.scoreJustification'), value: scoreSummary.justification },
+                { label: $t('report.scoreClarity'), value: scoreSummary.clarity }
+              ] as item}
+                <div class="p-3 rounded-xl border border-hairline dark:border-hairline-dark bg-paper-surface dark:bg-paper-surface-dark">
+                  <div class="text-[11px] font-sans text-ink-muted dark:text-ink-muted-dark">{item.label}</div>
+                  <div class="font-mono text-base font-medium text-ink dark:text-ink-dark mt-1">
+                    {item.value.toFixed(1)}<span class="text-xs text-ink-faint">/5</span>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </section>
+        {/if}
+
         <!-- 01: ARGUMENT & DEFENSE REFLECTION (SUMMARY) -->
-        <section class="mb-16 border-t border-hairline dark:border-hairline-dark pt-10 print-break-inside-avoid space-y-6">
+        <section class="mb-16 border-t border-hairline dark:border-hairline-dark pt-10 space-y-6">
           <h2 class="font-serif text-xl sm:text-2xl font-normal text-ink dark:text-ink-dark tracking-tight">
             {$t('report.summary')}
           </h2>
@@ -316,7 +388,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
           <!-- Delivery Style & Articulation Notes -->
           {#if (report.notes || []).length > 0}
             <div class="pt-6 border-t border-hairline dark:border-hairline-dark space-y-3">
-              <h3 class="text-xs uppercase tracking-widest font-mono text-ink-faint dark:text-ink-faint-dark">
+              <h3 class="text-xs font-sans font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-muted-dark">
                 {$t('report.notes')}
               </h3>
               <ul class="list-none p-0 m-0 space-y-2.5">
@@ -331,7 +403,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
         </section>
 
         <!-- 02: FOUNDATIONS & GROWTH AREAS (STRENGTHS & WEAKNESSES) -->
-        <section class="mb-16 border-t border-hairline dark:border-hairline-dark pt-10 print-break-inside-avoid">
+        <section class="mb-16 border-t border-hairline dark:border-hairline-dark pt-10">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16">
             <!-- Strengths (Solid Foundations) -->
             <div class="space-y-4">
@@ -384,7 +456,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
         </section>
 
         <!-- 03: ACTION PLAN TOWARDS DEFENSE -->
-        <section class="mb-16 border-t border-hairline dark:border-hairline-dark pt-10 print-break-inside-avoid space-y-4">
+        <section class="mb-16 border-t border-hairline dark:border-hairline-dark pt-10 space-y-4">
           <div class="border-b border-hairline dark:border-hairline-dark pb-2">
             <h2 class="font-serif text-xl sm:text-2xl font-normal text-ink dark:text-ink-dark tracking-tight">
               {$t('report.recommendations')}
@@ -409,7 +481,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
         </section>
 
         <!-- 04: SELF-PRACTICE DRILLS -->
-        <section class="mb-24 border-t border-hairline dark:border-hairline-dark pt-10 print-break-inside-avoid space-y-4">
+        <section class="mb-24 border-t border-hairline dark:border-hairline-dark pt-10 space-y-4">
           <div class="border-b border-hairline dark:border-hairline-dark pb-2">
             <h2 class="font-serif text-xl sm:text-2xl font-normal text-ink dark:text-ink-dark tracking-tight">
               {$t('report.practice')}
@@ -434,7 +506,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
                 <button
                   type="button"
                   on:click={() => handleCopyQuestion(pq, i)}
-                  class="no-print inline-flex items-center gap-1.5 shrink-0 text-xs font-mono text-ink-faint hover:text-ink dark:hover:text-ink-dark transition-colors px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+                  class="no-print inline-flex items-center gap-1.5 min-h-[40px] shrink-0 text-xs font-sans font-medium text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors px-3 py-2 rounded-md hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
                   aria-label={$t('report.copyQuestionAria')}
                   title={$t('report.copyQuestionTooltip')}
                 >

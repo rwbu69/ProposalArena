@@ -3,7 +3,7 @@
   import Controls from '../interview/Controls.svelte';
   import IntegrityMonitor from '../interview/IntegrityMonitor.svelte';
   import Icon from '../common/Icon.svelte';
-  import { currentProposal, currentSession, MAX_QUESTIONS } from '../../lib/interview/controller';
+  import { currentProposal, currentSession, MAX_QUESTIONS, isProcessing, endingStatusMessage, endInterview, exitActiveSession } from '../../lib/interview/controller';
   import { uiLanguage, showSettings } from '../../lib/state/stores';
   import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -20,6 +20,7 @@
   let timerInterval: ReturnType<typeof setInterval> | null = null;
   let mobilePanel: 'proposal' | 'interview' = 'interview';
   let showExitModal = false;
+  let hasAutoEndedOnTimeout = false;
 
   onMount(() => {
     timerInterval = setInterval(() => {
@@ -45,6 +46,23 @@
     ? `${Math.floor(remainingSeconds / 60)}:${(remainingSeconds % 60).toString().padStart(2, '0')}`
     : '';
 
+  $: if (
+    remainingSeconds === 0 &&
+    !hasAutoEndedOnTimeout &&
+    !$isProcessing &&
+    $currentSession &&
+    !['COMPLETED', 'REPORT_GENERATION', 'REPORT_READY'].includes($currentSession.state)
+  ) {
+    hasAutoEndedOnTimeout = true;
+    const isId = ($currentProposal?.language || 'id') === 'id';
+    endingStatusMessage.set(
+      isId
+        ? 'Waktu habis, sesi diakhiri otomatis. Catatan sedang disusun...'
+        : 'Time is up. Ending session automatically and compiling notes...'
+    );
+    endInterview();
+  }
+
   function toggleLanguage() {
     const currentLang = uiLanguage.get();
     uiLanguage.set(currentLang === 'en' ? 'id' : 'en');
@@ -54,9 +72,9 @@
     showExitModal = true;
   }
 
-  function exitSession() {
+  async function exitSession() {
     showExitModal = false;
-    window.location.reload();
+    await exitActiveSession();
   }
 </script>
 
@@ -64,10 +82,10 @@
 
 <div class="flex flex-col lg:flex-row w-full h-full min-h-0 overflow-hidden bg-paper dark:bg-paper-dark font-sans text-ink dark:text-ink-dark">
   <div class="lg:hidden shrink-0 flex border-b border-hairline dark:border-hairline-dark bg-paper dark:bg-paper-dark" role="group" aria-label={$t('arena.mobileView')}>
-    <button type="button" on:click={() => (mobilePanel = 'proposal')} class="flex-1 px-3 py-2 text-xs font-mono {mobilePanel === 'proposal' ? 'bg-ink text-paper dark:bg-ink-dark dark:text-paper-dark' : 'text-ink-muted dark:text-ink-muted-dark'}">
+    <button type="button" on:click={() => (mobilePanel = 'proposal')} class="flex-1 px-3.5 py-2.5 text-xs font-sans font-medium transition-colors {mobilePanel === 'proposal' ? 'bg-ink text-paper dark:bg-ink-dark dark:text-paper-dark' : 'text-ink-muted dark:text-ink-muted-dark hover:text-ink'}">
       {$t('arena.proposalView')}
     </button>
-    <button type="button" on:click={() => (mobilePanel = 'interview')} class="flex-1 px-3 py-2 text-xs font-mono {mobilePanel === 'interview' ? 'bg-ink text-paper dark:bg-ink-dark dark:text-paper-dark' : 'text-ink-muted dark:text-ink-muted-dark'}">
+    <button type="button" on:click={() => (mobilePanel = 'interview')} class="flex-1 px-3.5 py-2.5 text-xs font-sans font-medium transition-colors {mobilePanel === 'interview' ? 'bg-ink text-paper dark:bg-ink-dark dark:text-paper-dark' : 'text-ink-muted dark:text-ink-muted-dark hover:text-ink'}">
       {$t('arena.interviewView')}
     </button>
   </div>
@@ -89,16 +107,16 @@
     <!-- Viewer Header -->
     <div class="px-6 py-4 border-b border-hairline dark:border-hairline-dark flex justify-between items-center shrink-0 z-10 bg-paper dark:bg-paper-dark">
       <div class="min-w-0 pr-4">
-        <span class="text-[10px] uppercase tracking-widest font-mono text-ink-faint dark:text-ink-faint-dark block mb-0.5">
+        <span class="text-[11px] font-sans font-medium text-ink-muted dark:text-ink-muted-dark block mb-0.5">
           {$t('app.document')}
         </span>
-        <h2 class="font-serif text-sm sm:text-base font-normal tracking-tight text-ink dark:text-ink-dark truncate">
+        <h2 class="font-serif text-sm sm:text-base font-medium tracking-tight text-ink dark:text-ink-dark truncate">
           {$currentProposal?.title || $t('app.unknownTitle')}
         </h2>
       </div>
 
-      <div class="flex items-center gap-3 text-ink-faint dark:text-ink-faint-dark font-mono text-xs shrink-0">
-        <span>PDF</span>
+      <div class="flex items-center gap-2 text-ink-muted dark:text-ink-muted-dark font-sans text-xs shrink-0">
+        <span class="px-2 py-0.5 rounded border border-hairline dark:border-hairline-dark text-[11px] font-medium">PDF</span>
       </div>
     </div>
 
@@ -128,16 +146,16 @@
     <!-- Top Header -->
     <div class="px-6 py-4 border-b border-hairline dark:border-hairline-dark flex justify-between items-center shrink-0 z-10 bg-paper dark:bg-paper-dark">
       <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-wrap">
-        <span class="font-serif text-sm sm:text-base font-normal tracking-tight text-ink dark:text-ink-dark shrink-0">
+        <span class="font-serif text-sm sm:text-base font-medium tracking-tight text-ink dark:text-ink-dark shrink-0">
           {$t('app.interview')}
         </span>
         {#if $currentSession && $currentSession.questionIndex > 0}
-          <span class="text-xs font-mono text-ink-muted dark:text-ink-muted-dark shrink-0">
-            • {$t('interview.progress', { values: { current: Math.min($currentSession.questionIndex, MAX_QUESTIONS), total: MAX_QUESTIONS } })}
+          <span class="text-xs font-sans text-ink-muted dark:text-ink-muted-dark shrink-0">
+            ({Math.min($currentSession.questionIndex, MAX_QUESTIONS)}/{MAX_QUESTIONS})
           </span>
           {#if formattedRemainingTime}
             <span
-              class="text-xs font-mono inline-flex items-center gap-1 shrink-0 {isLastMinute ? 'text-amber-700 dark:text-amber-400 font-medium' : 'text-ink-muted dark:text-ink-muted-dark'}"
+              class="text-xs font-mono inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-hairline/40 dark:bg-hairline-dark/40 shrink-0 {isLastMinute ? 'text-amber-700 dark:text-amber-400 font-medium' : 'text-ink-muted dark:text-ink-muted-dark'}"
               title={$t('interview.timeRemaining')}
               aria-label={$t('interview.timeRemainingAria', { values: { time: formattedRemainingTime } })}
             >
@@ -149,11 +167,11 @@
       </div>
 
       <!-- Actions -->
-      <div class="flex items-center gap-1.5 text-xs font-mono text-ink-muted dark:text-ink-muted-dark">
+      <div class="flex items-center gap-1.5 text-xs font-sans text-ink-muted dark:text-ink-muted-dark">
         <button
           type="button"
           on:click={goHome}
-          class="w-10 h-10 flex items-center justify-center rounded-xs hover:text-ink dark:hover:text-ink-dark transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          class="w-10 h-10 flex items-center justify-center rounded-lg hover:text-ink dark:hover:text-ink-dark transition-colors hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer"
           aria-label={$t('arena.exitAria')}
           title={$t('arena.exitTooltip')}
         >
@@ -162,16 +180,16 @@
         <button
           type="button"
           on:click={toggleLanguage}
-          class="px-2 py-1.5 rounded-xs hover:text-ink dark:hover:text-ink-dark transition-colors uppercase tracking-wider focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          class="min-w-[40px] min-h-[40px] px-3 py-2 rounded-md hover:text-ink dark:hover:text-ink-dark transition-colors font-medium border border-hairline/80 dark:border-hairline-dark/80 hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer flex items-center justify-center"
           aria-label={$t('landing.toggleLanguageAria')}
           title={$t('landing.toggleLanguage')}
         >
-          {$uiLanguage}
+          {$uiLanguage === 'id' ? 'ID' : 'EN'}
         </button>
         <button
           type="button"
-          on:click={() => ($showSettings = true)}
-          class="w-10 h-10 flex items-center justify-center rounded-xs hover:text-ink dark:hover:text-ink-dark transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          on:click={() => showSettings.set(true)}
+          class="w-10 h-10 flex items-center justify-center rounded-lg hover:text-ink dark:hover:text-ink-dark transition-colors hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer"
           aria-label={$t('landing.settingsAria')}
           title={$t('settings.title')}
         >

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { submitAnswer, isProcessing, endInterview, currentProposal, currentMessages, endingStatusMessage } from '../../lib/interview/controller';
+  import { submitAnswer, isProcessing, processingStage, endInterview, currentProposal, currentMessages, endingStatusMessage } from '../../lib/interview/controller';
   import { voiceEnabled, handsFreeEnabled, handsFreePrivacyAcknowledged } from '../../lib/state/stores';
   import { SpeechDictation, stopSpeaking } from '../../lib/voice/speech';
+  import { AudioRecorder, transcribeAudio } from '../../lib/voice/recorder';
   import { handsFreeState, requestMicrophonePermission, isSpeechRecognitionSupported } from '../../lib/voice/handsFreeEngine';
   import { t } from 'svelte-i18n';
   import Icon from '../common/Icon.svelte';
@@ -9,6 +10,8 @@
   
   let text = '';
   let isRecording = false;
+  let isTranscribing = false;
+  let recorder: AudioRecorder | null = null;
   let dictation: SpeechDictation | null = null;
   let showPrivacyModal = false;
   let showFinishModal = false;
@@ -91,35 +94,63 @@
     $handsFreeEnabled = true;
   }
 
-  function toggleDictation() {
+  async function toggleDictation() {
+    if (isTranscribing) return;
+
     if (isRecording) {
-      dictation?.stop();
       isRecording = false;
+      if (recorder) {
+        isTranscribing = true;
+        try {
+          const { blob } = await recorder.stop();
+          recorder = null;
+          const lang = $currentProposal?.language || 'id';
+          const transcription = await transcribeAudio(blob, lang);
+          if (transcription) {
+            text = text ? text + ' ' + transcription : transcription;
+          }
+        } catch (err: any) {
+          console.warn("Audio transcription failed, error:", err);
+        } finally {
+          isTranscribing = false;
+        }
+      } else if (dictation) {
+        dictation.stop();
+      }
       return;
     }
     
-    const lang = $currentProposal?.language || 'id';
-    if (!dictation || dictation.language !== lang) {
-      dictation = new SpeechDictation(
-        lang, 
-        (res) => { 
-          text = text ? text + ' ' + res : res;
-        },
-        (err) => { 
-          console.warn("Speech error:", err); 
-          isRecording = false; 
-        },
-        () => { 
-          isRecording = false; 
-        }
-      );
-    }
-    
-    if (dictation.isSupported()) {
+    // Attempt standard microphone audio recording with Groq Whisper first
+    try {
+      recorder = new AudioRecorder();
+      await recorder.start();
       isRecording = true;
-      dictation.start();
-    } else {
-      alert($t('interview.dictationUnsupported'));
+    } catch (recorderErr) {
+      console.warn("AudioRecorder start failed, falling back to SpeechRecognition:", recorderErr);
+      recorder = null;
+      const lang = $currentProposal?.language || 'id';
+      if (!dictation || dictation.language !== lang) {
+        dictation = new SpeechDictation(
+          lang, 
+          (res) => { 
+            text = text ? text + ' ' + res : res;
+          },
+          (err) => { 
+            console.warn("Speech error:", err); 
+            isRecording = false; 
+          },
+          () => { 
+            isRecording = false; 
+          }
+        );
+      }
+      
+      if (dictation.isSupported()) {
+        isRecording = true;
+        dictation.start();
+      } else {
+        alert($t('interview.dictationUnsupported'));
+      }
     }
   }
 </script>
@@ -138,11 +169,7 @@
               </span>
             {:else if $handsFreeState.status === 'listening'}
               <!-- Mic open indicator -->
-              <span class="relative flex h-2 w-2 mr-0.5">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-              </span>
-              <Icon name="mic" size={16} class="text-red-600 shrink-0" />
+              <Icon name="mic" size={16} class="text-red-600 shrink-0 animate-pulse" />
               <span class="text-ink dark:text-ink-dark font-medium">
                 {$t('interview.listeningAnswer')}
               </span>
@@ -154,7 +181,12 @@
             {:else if $handsFreeState.status === 'examiner_thinking' || $isProcessing}
               <Icon name="loader" size={16} class="animate-spin text-ink-muted dark:text-ink-muted-dark shrink-0" />
               <span class="text-ink-muted dark:text-ink-muted-dark">
-                {$endingStatusMessage || $t('interview.examinerThinking')}
+                {$endingStatusMessage ||
+                  ($processingStage === 'voice'
+                    ? $t('interview.preparingVoice')
+                    : $processingStage === 'question'
+                      ? $t('interview.preparingQuestion')
+                      : $t('interview.examinerThinking'))}
               </span>
             {:else}
               <Icon name="mic" size={16} class="text-accent dark:text-accent-dark shrink-0" />
@@ -168,7 +200,7 @@
           <button
             type="button"
             on:click={() => ($handsFreeEnabled = false)}
-            class="inline-flex items-center gap-1.5 text-ink-faint hover:text-ink dark:hover:text-ink-dark transition-colors underline underline-offset-2 px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+            class="inline-flex items-center gap-1.5 min-h-[40px] text-ink-faint hover:text-ink dark:hover:text-ink-dark transition-colors underline underline-offset-2 px-3 py-2 rounded-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
             aria-label={$t('interview.switchToTypingAria')}
           >
             <Icon name="keyboard" size={14} />
@@ -181,7 +213,7 @@
             type="button"
             on:click={handleConfirmEndInterview}
             disabled={$isProcessing}
-            class="inline-flex items-center gap-1.5 text-xs font-mono text-ink-faint hover:text-red-700 dark:hover:text-red-400 transition-colors disabled:opacity-40 px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-red-600"
+            class="inline-flex items-center gap-1.5 min-h-[40px] text-xs font-mono text-ink-faint hover:text-red-700 dark:hover:text-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer px-3 py-2 rounded-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
             aria-label={$t('interview.finishAria')}
           >
             <Icon name="square" size={14} class="text-red-600" />
@@ -205,7 +237,14 @@
             on:input={autoResize}
             disabled={$isProcessing}
             rows="1" 
-            placeholder={$isProcessing ? ($endingStatusMessage || $t('interview.waiting')) : $t('interview.placeholder')}
+            placeholder={$isProcessing
+              ? ($endingStatusMessage ||
+                ($processingStage === 'voice'
+                  ? $t('interview.preparingVoice')
+                  : $processingStage === 'question'
+                    ? $t('interview.preparingQuestion')
+                    : $t('interview.waiting')))
+              : $t('interview.placeholder')}
             class="w-full bg-transparent border-b border-hairline dark:border-hairline-dark focus:border-ink dark:focus:border-ink-dark text-ink dark:text-ink-dark text-sm sm:text-base resize-none outline-none py-2.5 pr-20 transition-colors placeholder:text-ink-faint disabled:opacity-40"
           ></textarea>
           
@@ -214,34 +253,38 @@
             <button 
               type="button"
               on:click={toggleDictation}
-              disabled={$isProcessing}
-              class="w-10 h-10 flex items-center justify-center rounded-xs transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark {isRecording ? 'text-red-600' : 'text-ink-faint hover:text-ink dark:hover:text-ink-dark'}" 
+              disabled={$isProcessing || isTranscribing}
+              class="w-10 h-10 flex items-center justify-center rounded-xs transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark {isRecording ? 'text-red-600 animate-pulse' : isTranscribing ? 'text-accent dark:text-accent-dark' : 'text-ink-faint hover:text-ink dark:hover:text-ink-dark'}" 
               aria-label={$t('interview.dictateAria')}
-              title={$t('interview.dictateTooltip')}>
-              <Icon name={isRecording ? 'mic-off' : 'mic'} size={18} />
+              title={isTranscribing ? 'Mentranskripsi suara...' : $t('interview.dictateTooltip')}>
+              {#if isTranscribing}
+                <Icon name="loader" size={18} class="animate-spin" />
+              {:else}
+                <Icon name={isRecording ? 'mic-off' : 'mic'} size={18} />
+              {/if}
             </button>
             <!-- Send -->
             <button 
               type="button"
               on:click={handleSubmit}
               disabled={!text.trim() || $isProcessing}
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark rounded-xs transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent-dark focus-visible:ring-offset-1 focus-visible:ring-offset-paper dark:focus-visible:ring-offset-paper-dark" 
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-sans font-medium bg-ink hover:bg-ink/90 dark:bg-ink-dark dark:hover:bg-ink-dark/90 text-paper dark:text-paper-dark rounded-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark" 
               aria-label={$t('interview.sendAria')}
               title={$t('interview.send')}>
-              <Icon name="send" size={14} />
+              <Icon name="send" size={13} />
               <span>{$t('interview.send')}</span>
             </button>
           </div>
         </div>
         
         <!-- Utility actions bar -->
-        <div class="flex justify-between items-center text-xs font-mono text-ink-faint dark:text-ink-faint-dark pt-1">
+        <div class="flex justify-between items-center text-xs font-sans text-ink-muted dark:text-ink-muted-dark pt-1">
           <div class="flex items-center gap-3 sm:gap-5">
             <!-- Voice Toggle -->
             <button 
               type="button"
               on:click={toggleVoice} 
-              class="inline-flex items-center gap-1.5 hover:text-ink dark:hover:text-ink-dark transition-colors px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+              class="inline-flex items-center gap-1.5 min-h-[40px] hover:text-ink dark:hover:text-ink-dark transition-colors px-3 py-2 rounded-lg hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
               aria-label={$t('interview.voiceToggleAria')}
             >
               <Icon name={$voiceEnabled ? 'volume' : 'volume-x'} size={15} />
@@ -253,7 +296,7 @@
               type="button"
               on:click={toggleHandsFree}
               disabled={$isProcessing}
-              class="inline-flex items-center gap-1.5 hover:text-ink dark:hover:text-ink-dark transition-colors font-medium px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark {$handsFreeEnabled ? 'text-accent dark:text-accent-dark' : ''}"
+              class="inline-flex items-center gap-1.5 min-h-[40px] hover:text-ink dark:hover:text-ink-dark transition-colors font-medium px-3 py-2 rounded-lg hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark {$handsFreeEnabled ? 'text-accent dark:text-accent-dark' : ''}"
               aria-label={$t('interview.handsFreeToggleAria')}
             >
               <Icon name={$handsFreeEnabled ? 'mic' : 'mic-off'} size={15} />
@@ -266,7 +309,7 @@
             type="button"
             on:click={handleConfirmEndInterview} 
             disabled={$isProcessing} 
-            class="inline-flex items-center gap-1.5 hover:text-red-700 dark:hover:text-red-400 transition-colors disabled:opacity-40 px-2 py-1 rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-red-600"
+            class="inline-flex items-center gap-1.5 min-h-[40px] text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer px-3 py-2 rounded-lg hover:bg-red-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
             aria-label={$t('interview.finishAria')}
           >
             <Icon name="square" size={14} class="text-red-600" />
@@ -293,31 +336,31 @@
 <!-- FIRST-TIME PRIVACY NOTICE MODAL -->
 {#if showPrivacyModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-    <div class="bg-paper dark:bg-paper-dark border border-hairline dark:border-hairline-dark max-w-md w-full p-6 text-ink dark:text-ink-dark space-y-4">
+    <div class="bg-paper dark:bg-paper-dark border border-hairline dark:border-hairline-dark max-w-md w-full p-6 text-ink dark:text-ink-dark space-y-4 rounded-2xl shadow-2xl">
       <div class="space-y-1">
         <div class="flex items-center gap-2">
           <Icon name="shield-check" size={20} class="text-accent dark:text-accent-dark shrink-0" />
           <h3 class="font-serif text-lg font-normal tracking-tight">{$t('interview.handsFreePrivacyTitle')}</h3>
         </div>
-        <p class="text-[11px] font-mono text-ink-faint uppercase tracking-wider pl-7">Web Speech API Notice</p>
+        <p class="text-xs font-sans text-ink-muted pl-7">Pemberitahuan Web Speech API</p>
       </div>
 
       <p class="text-xs text-ink-muted dark:text-ink-muted-dark leading-relaxed font-sans">
         {$t('interview.handsFreePrivacyDesc')}
       </p>
 
-      <div class="flex justify-end gap-3 pt-3 border-t border-hairline dark:border-hairline-dark font-mono text-xs">
+      <div class="flex justify-end gap-2.5 pt-3 border-t border-hairline dark:border-hairline-dark font-sans font-medium text-xs">
         <button
           type="button"
           on:click={() => (showPrivacyModal = false)}
-          class="px-3 py-1.5 text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors rounded-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+          class="px-3.5 py-2 text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors rounded-lg hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 focus:outline-none"
         >
           {$t('interview.handsFreePrivacyCancel')}
         </button>
         <button
           type="button"
           on:click={handleAcceptPrivacy}
-          class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent-hover dark:bg-accent-dark dark:hover:bg-accent-dark-hover text-paper dark:text-paper-dark transition-colors rounded-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent-dark"
+          class="inline-flex items-center gap-1.5 px-4.5 py-2 bg-ink hover:bg-ink/90 dark:bg-ink-dark dark:hover:bg-ink-dark/90 text-paper dark:text-paper-dark transition-all rounded-lg shadow-sm focus:outline-none"
         >
           <Icon name="check" size={16} />
           <span>{$t('interview.handsFreePrivacyAccept')}</span>
