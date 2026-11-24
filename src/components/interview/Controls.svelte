@@ -200,7 +200,7 @@
           <button
             type="button"
             on:click={() => ($handsFreeEnabled = false)}
-            class="inline-flex items-center gap-1.5 min-h-[40px] text-ink-faint hover:text-ink dark:hover:text-ink-dark transition-colors underline underline-offset-2 px-3 py-2 rounded-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+            class="inline-flex items-center gap-1.5 min-h-[40px] text-xs font-sans font-medium text-ink-muted hover:text-ink dark:hover:text-ink-dark transition-colors border border-hairline dark:border-hairline-dark bg-paper-surface/60 dark:bg-paper-surface-dark/60 hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 px-3 py-2 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
             aria-label={$t('interview.switchToTypingAria')}
           >
             <Icon name="keyboard" size={14} />
@@ -237,14 +237,7 @@
             on:input={autoResize}
             disabled={$isProcessing}
             rows="1" 
-            placeholder={$isProcessing
-              ? ($endingStatusMessage ||
-                ($processingStage === 'voice'
-                  ? $t('interview.preparingVoice')
-                  : $processingStage === 'question'
-                    ? $t('interview.preparingQuestion')
-                    : $t('interview.waiting')))
-              : $t('interview.placeholder')}
+            placeholder={$isProcessing ? $t('interview.waiting') : $t('interview.placeholder')}
             class="w-full bg-transparent border-b border-hairline dark:border-hairline-dark focus:border-ink dark:focus:border-ink-dark text-ink dark:text-ink-dark text-sm sm:text-base resize-none outline-none py-2.5 pr-20 transition-colors placeholder:text-ink-faint disabled:opacity-40"
           ></textarea>
           

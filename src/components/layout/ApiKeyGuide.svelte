@@ -70,7 +70,7 @@
         <button
           type="button"
           on:click={() => showSettings.set(true)}
-          class="inline-flex items-center gap-1 font-sans font-medium text-xs text-ink dark:text-ink-dark underline underline-offset-4 hover:text-accent dark:hover:text-accent-dark transition-colors px-1 py-0.5 rounded-md focus:outline-none"
+          class="inline-flex items-center gap-1.5 min-h-[40px] font-sans font-medium text-xs text-ink dark:text-ink-dark border border-hairline dark:border-hairline-dark bg-paper dark:bg-paper-dark hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 transition-colors px-3 py-2 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
           aria-label={$t('tutorial.openSettingsAria')}
         >
           <span>{$t('tutorial.openSettings')}</span>

@@ -282,7 +282,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
       {#if isDemo}
         <div class="mb-12 py-3 px-4 border border-hairline dark:border-hairline-dark bg-paper-surface dark:bg-paper-surface-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs font-sans text-ink-muted dark:text-ink-muted-dark no-print rounded-xl">
           <span>{$t('report.demoBanner')}</span>
-          <a href="/" class="inline-flex items-center gap-1 underline text-ink dark:text-ink-dark hover:opacity-80 px-1 py-0.5 rounded-md focus:outline-none">
+          <a href="/" class="inline-flex items-center gap-1.5 min-h-[40px] font-medium text-ink dark:text-ink-dark border border-hairline dark:border-hairline-dark bg-paper dark:bg-paper-dark hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 px-3 py-2 rounded-lg transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark">
             <span>{$t('report.startNewSession')}</span>
             <Icon name="arrow-right" size={13} />
           </a>
@@ -295,7 +295,7 @@ Namun, terdapat area metodologi eksperimen yang masih membutuhkan pendalaman—t
           <p class="text-sm font-sans text-ink-muted">
             {$t('report.emptyReport')}
           </p>
-          <a href="/" class="inline-flex items-center gap-1.5 text-xs font-sans font-medium text-ink underline underline-offset-4 px-1 py-0.5 rounded-md focus:outline-none">
+          <a href="/" class="inline-flex items-center gap-1.5 min-h-[40px] text-xs font-sans font-medium text-ink dark:text-ink-dark border border-hairline dark:border-hairline-dark bg-paper dark:bg-paper-dark hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 px-3.5 py-2 rounded-lg transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark">
             <Icon name="arrow-left" size={14} />
             <span>{$t('report.return')}</span>
           </a>

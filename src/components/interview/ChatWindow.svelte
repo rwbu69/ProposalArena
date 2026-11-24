@@ -62,21 +62,8 @@
         </p>
       </div>
 
-      {#if $isProcessing}
-        <div class="flex items-center gap-2.5 text-xs font-sans text-ink-muted dark:text-ink-muted-dark py-2">
-          <Icon name="loader" size={15} class="animate-spin text-accent dark:text-accent-dark shrink-0" />
-          <span>
-            {$processingStage === 'voice'
-              ? $t('interview.preparingVoice')
-              : $processingStage === 'question'
-                ? $t('interview.preparingQuestion')
-                : $t('interview.waiting')}
-          </span>
-        </div>
-      {/if}
-
       {#if $sessionError}
-        <div class="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-sans text-red-600 dark:text-red-400 space-y-2">
+        <div class="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-sans text-red-600 dark:text-red-400 space-y-2.5">
           <div class="flex items-start gap-2">
             <Icon name="alert-triangle" size={16} class="shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
             <span class="break-words flex-1 leading-relaxed">{$sessionError}</span>
@@ -85,10 +72,11 @@
             <button
               type="button"
               on:click={() => showSettings.set(true)}
-              class="inline-flex items-center gap-1.5 min-h-[40px] px-2 text-xs font-sans font-medium text-ink dark:text-ink-dark underline underline-offset-4 hover:text-ink-muted cursor-pointer rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
+              class="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 py-2 text-xs font-sans font-medium text-ink dark:text-ink-dark bg-paper dark:bg-paper-dark border border-hairline dark:border-hairline-dark hover:bg-hairline/40 dark:hover:bg-hairline-dark/40 cursor-pointer rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark"
             >
-              <Icon name="settings" size={12} />
-              <span>Periksa Pengaturan API →</span>
+              <Icon name="settings" size={13} />
+              <span>Periksa Pengaturan API</span>
+              <Icon name="arrow-right" size={13} />
             </button>
           </div>
         </div>
@@ -138,16 +126,16 @@
           {/if}
         </button>
 
-        <div class="space-y-1">
+        <div class="space-y-1.5">
           <button 
             type="button"
             on:click={toggleHandsFreeStaging}
-            class="inline-flex items-center gap-2 min-h-[40px] text-xs font-sans text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark transition-colors rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark cursor-pointer px-2.5 py-2"
+            class="inline-flex items-center gap-2.5 min-h-[40px] text-xs font-sans transition-colors rounded-lg border px-3.5 py-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:focus-visible:ring-ink-dark {$handsFreeEnabled ? 'border-accent/40 dark:border-accent-dark/40 bg-accent/10 dark:bg-accent-dark/15 text-ink dark:text-ink-dark' : 'border-hairline dark:border-hairline-dark bg-paper-surface/60 dark:bg-paper-surface-dark/60 text-ink-muted dark:text-ink-muted-dark hover:border-ink-muted hover:text-ink dark:hover:text-ink-dark'}"
             aria-label={$t('interview.handsFreeToggleAria')}
           >
             <Icon name={$handsFreeEnabled ? 'mic' : 'mic-off'} size={15} class={$handsFreeEnabled ? 'text-accent dark:text-accent-dark' : 'text-ink-faint'} />
-            <span>{$t('interview.handsFreeToggle')}:</span>
-            <span class="underline underline-offset-4 {$handsFreeEnabled ? 'font-medium text-ink dark:text-ink-dark' : 'text-ink-faint'}">
+            <span>{$t('interview.handsFreeToggle')}</span>
+            <span class="px-2 py-0.5 rounded-md text-[11px] font-medium {$handsFreeEnabled ? 'bg-accent text-paper dark:bg-accent-dark dark:text-paper-dark' : 'bg-hairline/70 dark:bg-hairline-dark/70 text-ink-muted dark:text-ink-muted-dark'}">
               {$handsFreeEnabled ? $t('interview.enabled') : $t('interview.disabled')}
             </span>
           </button>
